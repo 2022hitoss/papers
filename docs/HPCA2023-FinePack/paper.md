@@ -8,6 +8,8 @@
 
 这篇论文不是首次提出 multi-GPU strong scaling 的通信瓶颈，而是在已有 P2P store / proactive transfer 工作基础上继续推进：既有研究已经说明，把数据结构复制到多张 GPU 上，并在产生更新时用 peer-to-peer stores 主动推送到远端副本，可以让后续 load 都落在本地 HBM 中，从而避免远端 read 卡住计算流水线。问题在于，这类 P2P store 在 irregular workloads 中天然会产生很多 sub-cacheline 级别的小写入，典型大小只有 4-32B，而 PCIe/NVLink 这类互连协议更偏向大块传输；小 payload 被固定 header、framing、CRC、sequence number 和 padding 稀释后，有效带宽会显著下降。
 
+![本文Motivation，介绍Sub-cacheline和协议开销](images/fig01.jpg)
+
 ![Fig. 2: P2P store 粒度越小，PCIe/NVLink goodput 越低。](images/fig02.jpg)
 
 Fig. 2 的核心证据是：P2P store 的传输粒度通常不超过 128B，而 DMA 往往在 KB 级；在 32B 左右的传输上，协议开销几乎可以吃掉一半链路能力。也就是说，P2P store 的编程模型和 overlap 能力是对的，但它把互连推到了最不擅长的工作区间。
