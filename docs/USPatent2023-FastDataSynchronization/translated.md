@@ -1,0 +1,2836 @@
+(19) United States
+
+> 
+(19) 美国
+
+
+
+
+(12) Patent Application Publication CHOQUETTE et al. (10) Pub. No.: US 2023/0315655 A1
+
+> 
+(12) 专利申请公开 CHOQUETTE 等人 (10) 公开号：US 2023/0315655 A1
+
+
+
+
+(43) Pub. Date: Oct. 5, 2023
+
+> 
+(43) 出版日期：2023年10月5日
+
+
+
+
+(54) FAST DATA SYNCHRONIZATION IN PROCESSORS AND MEMORY
+
+> 
+(54) 处理器与存储器中的快速数据同步
+
+
+
+
+(71) Applicant: NVIDIA Corporation, Santa Clara, CA (US)
+
+> 
+(71) 申请人：NVIDIA Corporation，圣克拉拉，加利福尼亚州 (US)
+
+
+
+
+(72) Inventors: Jack CHOQUETTE, Santa Clara, CA (US); Ronny KRASHINSKY, Santa Clara, CA (US); Timothy GUO, Santa Clara, CA (US); Carter EDWARDS, Santa Clara, CA (US); Steve
+
+> 
+(72) 发明人：Jack CHOQUETTE，加利福尼亚州圣克拉拉 (US)；Ronny KRASHINSKY，加利福尼亚州圣克拉拉 (US)；Timothy GUO，加利福尼亚州圣克拉拉 (US)；Carter EDWARDS，加利福尼亚州圣克拉拉 (US)；Steve
+
+
+
+
+HEINRICH, Santa Clara, CA (US);
+
+> 
+海因里希，圣克拉拉，加利福尼亚州（美国）；
+
+
+
+
+John EDMONDSON, Santa Clara, CA (US); Prakash Bangalore
+
+> 
+John EDMONDSON，加利福尼亚州圣克拉拉（美国）；Prakash Bangalore
+
+
+
+
+PRABHAKAR, Santa Clara, CA (US); Apoorv PARLE, JR., Santa Clara, CA (US); Manan PATEL, Santa Clara, CA (US); Olivier GIROUX, Santa Clara, CA (US); Michael PELLAUER, Santa Clara, CA (US)
+
+> 
+PRABHAKAR，圣克拉拉，加利福尼亚州（美国）；Apoorv PARLE, JR.，圣克拉拉，加利福尼亚州（美国）；Manan PATEL，圣克拉拉，加利福尼亚州（美国）；Olivier GIROUX，圣克拉拉，加利福尼亚州（美国）；Michael PELLAUER，圣克拉拉，加利福尼亚州（美国）
+
+
+
+
+(21) Appl. No.: 17/691,303
+
+> 
+(21) 申请号：17/691,303
+
+
+
+
+(22) Filed: Mar. 10, 2022
+
+> 
+(22) 提交日期：2022年3月10日
+
+
+
+
+Publication Classification
+
+> 
+出版物分类
+
+
+
+
+(51) Int. Cl.
+
+> 
+(51) 国际专利分类
+
+
+
+
+G06F 13/16 (2006.01)
+
+> 
+G06F 13/16 (2006.01)
+
+
+
+
+(52) U.S. Cl.
+
+> 
+(52) 美国分类
+
+
+
+
+CPC G06F 13/1689 (2013.01);
+
+> 
+CPC G06F 13/1689 (2013.01)；
+
+
+
+
+G06F 13/1673 (2013.01)
+
+> 
+G06F 13/1673 (2013.01)
+
+
+
+
+(57)
+
+> 
+(57)
+
+
+
+
+## ABSTRACT
+
+A new synchronization system synchronizes data exchanges between producer processes and consumer processes which may be on the same or different processors in a multiprocessor system. The synchronization incurs less than one round-trip of latency - in some implementations, in approximately 0.5 roundtrip times. A key aspect of the fast synchronization is that the producer's data store is followed without delay with the updating of a barrier on which the consumer is waiting.
+
+> 
+一种新型同步系统协调多处理器系统中可能位于相同或不同处理器上的生产者进程与消费者进程之间的数据交换。该同步产生的延迟不到一次往返时间——在某些实现中，约为0.5个往返时间。快速同步的一个关键方面是，生产者的数据存储之后，会立即更新消费者正在等待的屏障，没有延迟。
+
+
+
+
+![0_212_1403_1352_421_0.jpg](images/fig01.jpg)
+
+![1_237_424_1216_1623_-1.jpg](images/fig02.jpg)
+
+FIG. 1A
+
+> 
+图1A
+
+
+
+
+![2_285_1309_1203_749_-1.jpg](images/fig03.jpg)
+
+Strong scaling
+
+> 
+强扩展性
+
+
+
+
+DL
+
+> 
+深度学习
+
+
+
+
+Output
+
+> 
+输出
+
+
+
+
+Activations
+
+> 
+激活
+
+
+
+
+FIG. 1C
+
+> 
+图 1C
+
+
+
+
+![3_273_264_1226_1941_0.jpg](images/fig04.jpg)
+
+![4_228_264_1291_1889_-1.jpg](images/fig05.jpg)
+
+![5_259_208_1267_1858_-1.jpg](images/fig06.jpg)
+
+FIG. 3C
+
+> 
+图3C
+
+
+
+
+![6_246_543_1259_1203_-1.jpg](images/fig07.jpg)
+
+FIG. 3D
+
+> 
+图3D
+
+
+
+
+![7_241_435_1261_1319_-1.jpg](images/fig08.jpg)
+
+![8_536_394_578_1702_-1.jpg](images/fig09.jpg)
+
+FIG. 4
+
+> 
+图4
+
+
+
+
+![9_238_318_1296_1792_0.jpg](images/fig10.jpg)
+
+![10_246_438_1278_1578_0.jpg](images/fig11.jpg)
+
+![11_381_327_932_1825_-1.jpg](images/fig12.jpg)
+
+FIG. 5C
+
+> 
+图 5C
+
+
+
+
+![12_380_328_931_1825_-1.jpg](images/fig13.jpg)
+
+FIG. 6A
+
+> 
+图6A
+
+
+
+
+![13_381_328_930_1825_-1.jpg](images/fig14.jpg)
+
+FIG. 6B
+
+> 
+图6B
+
+
+
+
+![14_462_263_760_1964_-1.jpg](images/fig15.jpg)
+
+FIG. 6C
+
+> 
+图6C
+
+
+
+
+![15_495_614_612_1265_-1.jpg](images/fig16.jpg)
+
+FIG. 6D
+
+> 
+图6D
+
+
+
+
+![16_594_540_497_1410_-1.jpg](images/fig17.jpg)
+
+FIG. 7A
+
+> 
+图7A
+
+
+
+
+![17_271_569_174_1396_-1.jpg](images/fig18.jpg)
+
+FIG. 7B
+
+> 
+图7B
+
+
+
+
+63
+
+> 
+63
+
+
+
+
+56 55 32 31 24 23 0
+
+> 
+56 55 32 31 24 23 0
+
+
+
+
+Barrier Barrier Address in Data Data Address in
+
+> 
+屏障 屏障 地址 在 数据 数据 地址 在
+
+
+
+
+CTA_ID in CGA target CTA’s SMEM CTA_ID in CGA target CTA's SMEM
+
+> 
+CGA 中目标 CTA 的 SMEM 中的 CTA_ID CGA 中目标 CTA 的 SMEM 中的 CTA_ID
+
+
+
+
+FIG. 7C
+
+> 
+图7C
+
+
+
+
+XBAR to SM Transaction for Arrive w/ Every Transaction
+
+> 
+伴随每笔交易到达的XBAR至SM交易
+
+
+
+
+![17_1094_766_335_975_-1.jpg](images/fig19.jpg)
+
+FIG. 7D
+
+> 
+图7D
+
+
+
+
+![18_321_459_1025_1586_-1.jpg](images/fig20.jpg)
+
+FIG. 8
+
+> 
+图8
+
+
+
+
+![19_391_474_852_1545_-1.jpg](images/fig21.jpg)
+
+FIG. 9A
+
+> 
+图 9A
+
+
+
+
+![20_385_621_838_1244_0.jpg](images/fig22.jpg)
+
+Arrive Count Fence Count Expected
+
+> 
+到达计数 围栏计数 期望值
+
+
+
+
+Arrive Count
+
+> 
+到达计数
+
+
+
+
+FIG. 9C
+
+> 
+图9C
+
+
+
+
+![21_882_1660_314_557_-1.jpg](images/fig23.jpg)
+
+![21_872_927_301_689_-1.jpg](images/fig24.jpg)
+
+![21_832_275_353_594_-1.jpg](images/fig25.jpg)
+
+FIG. 9D FIG. 9E FIG. 9F
+
+> 
+图9D 图9E 图9F
+
+
+
+
+![22_360_557_848_1382_-1.jpg](images/fig26.jpg)
+
+FIG. 9G
+
+> 
+图9G
+
+
+
+
+![23_341_528_1087_1439_0.jpg](images/fig27.jpg)
+
+![24_395_260_887_1965_-1.jpg](images/fig28.jpg)
+
+FIG. 91
+
+> 
+图 91
+
+
+
+
+![25_309_395_1149_1611_0.jpg](images/fig29.jpg)
+
+FIG. 10
+
+> 
+图10
+
+
+
+
+![26_289_360_1202_1607_0.jpg](images/fig30.jpg)
+
+FIG. 11A
+
+> 
+图11A
+
+
+
+
+Example General Processing Cluster
+
+> 
+示例通用处理集群
+
+
+
+
+![27_311_517_1161_1341_0.jpg](images/fig31.jpg)
+
+FIG. 11B
+
+> 
+图 11B
+
+
+
+
+![28_336_417_1099_1545_0.jpg](images/fig32.jpg)
+
+FIG. 12
+
+> 
+图12
+
+
+
+
+![29_300_486_1178_1363_0.jpg](images/fig33.jpg)
+
+FIG. 13A
+
+> 
+图13A
+
+
+
+
+![30_302_420_1180_1513_0.jpg](images/fig34.jpg)
+
+FIG. 13B
+
+> 
+图 13B
+
+
+
+
+## FAST DATA SYNCHRONIZATION IN PROCESSORS AND MEMORY
+
+## CROSS-REFERENCES TO RELATED APPLICATIONS
+
+[0001] This application is related to the following commonly-assigned copending US patent applications, the entire contents of each of which are incorporated by reference:
+
+> 
+[0001] 本申请与以下共同转让的待决美国专利申请相关，各申请的全部内容通过引用并入本文：
+
+
+
+
+[0002] U.S. Application No. 17/691,276 filed Mar. 10, 2022, titled "Method And Apparatus For Efficient Access To Multidimensional Data Structures And/Or Other Large Data Blocks";
+
+> 
+[0002] 美国申请号 17/691,276，提交于2022年3月10日，标题为“高效访问多维数据结构和/或其他大数据块的方法和设备”
+
+
+
+
+[0003] U.S. Application No. 17/691,621 filed Mar. 10, 2022, titled "Cooperative Group Arrays";
+
+> 
+[0003] 美国申请号 17/691,621，提交于 2022 年 3 月 10 日，标题为“协作群组阵列”；
+
+
+
+
+[0004] U.S. Application No. 17/691,690 filed Mar. 10, 2022, titled "Distributed Shared Memory";
+
+> 
+[0004] 美国申请第17/691,690号，于2022年3月10日提交，标题为“分布式共享内存”；
+
+
+
+
+[0005] U.S. Application No. 17/691,759 filed Mar. 10, 2022, titled "Virtualizing Hardware Processing Resources in a Processor";
+
+> 
+[0005] 美国申请号 17/691,759，提交于2022年3月10日，标题为“在处理器中虚拟化硬件处理资源”；
+
+
+
+
+[0006] U.S. Application No. 17/691,288 filed Mar. 10, 2022, titled "Programmatically Controlled Data Multicasting Across Multiple Compute Engines";
+
+> 
+[0006] 美国专利申请号17/691,288，提交于2022年3月10日，标题为“跨多个计算引擎的可编程控制数据多播”；
+
+
+
+
+[0007] U.S. Application No. 17/691,296 filed Mar. 10, 2022, titled "Hardware Accelerated Synchronization With Asynchronous Transaction Support";
+
+> 
+[0007] 美国申请号17/691,296，于2022年3月10日提交，题为“支持异步事务的硬件加速同步”；
+
+
+
+
+[0008] U.S. Application No. 17/691,406 filed Mar. 10, 2022, titled "Efficient Matrix Multiply and Add with a Group of Warps";
+
+> 
+[0008] 美国专利申请第17/691,406号，于2022年3月10日提交，标题为“具有线程组的高效矩阵乘加”；
+
+
+
+
+[0009] U.S. Application No. 17/691,872 filed Mar. 10, 2022, titled "Techniques for Scalable Load Balancing of Thread Groups in a Processor";
+
+> 
+[0009] 美国申请号17/691,872，提交于2022年3月10日，标题为“处理器中线程组可扩展负载均衡技术”。
+
+
+
+
+[0010] U.S. Application No. 17/691,808 filed Mar. 10, 2022, titled "Flexible Migration of Executing Software Between Processing Components Without Need For Hardware Reset"; and
+
+> 
+[0010] 于2022年3月10日提交的标题为“无需硬件重置即可在处理组件之间灵活迁移执行软件”的美国申请第17/691,808号；以及
+
+
+
+
+[0011] U.S. Application No. 17/691,422 filed Mar. 10, 2022, titled "Method And Apparatus For Efficient Access To Multidimensional Data Structures And/Or Other Large Data Blocks".
+
+> 
+[0011] 美国申请号17/691,422，提交于2022年3月10日，标题为“用于高效访问多维数据结构和/或其它大型数据块的方法和装置”。
+
+
+
+
+## FIELD
+
+[0012] This technology generally relates to improving processing efficiency. More particularly, the technology herein relates to specialized circuitry for handling data synchronization.
+
+> 
+[0012] 本技术总体上涉及提高处理效率。更具体地，本文的技术涉及用于处理数据同步的专用电路。
+
+
+
+
+## BACKGROUND
+
+[0013] Users want deep learning and high performance computing (HPC) compute programs to continue to scale as graphics processing unit (GPU) technology improves and the number of processing core units increases per chip with each generation. What is desired is a faster time to solution for a single application, not scaling only by running $\mathrm{N}$ independent applications.
+
+> 
+[0013] 用户希望随着图形处理单元（GPU）技术的改进以及每芯片处理核心单元数量逐代增加，深度学习与高性能计算（HPC）程序能够持续扩展。期望的是单个应用能更快得到解决方案，而不仅仅是通过运行 $\mathrm{N}$ 个独立应用来实现扩展。
+
+
+
+
+[0014] FIG. 1A shows example deep learning (DL) networks comprising long chains of sequentially-dependent compute-intensive layers. Each layer is calculated using operations such as e.g., multiplying input activations against a matrix of weights to produce output activations. The layers are typically parallelized across a GPU or cluster of GPUs by dividing the work into output activation tiles each representing the work one processing core will process.
+
+> 
+[0014] 图1A示出了示例性深度学习(DL)网络，其包含由顺序依赖的计算密集型层组成的长链。每一层通过诸如将输入激活值与权重矩阵相乘以产生输出激活值等操作进行计算。这些层通常跨GPU或GPU集群并行化，方法是将工作划分为多个输出激活瓦片，每个瓦片代表一个处理核将要处理的工作。
+
+
+
+
+[0015] Due to the potentially massive number of computations deep learning requires, faster is usually the goal. And it makes intuitive sense that performing many computations in parallel will speed up processing as compared to performing all those computations serially. In fact, the amount of performance benefit an application will realize by running on a given GPU implementation typically depends entirely on the extent to which it can be parallelized. But there are different approaches to parallelism.
+
+> 
+[0015] 由于深度学习可能需要海量的计算，更快的速度通常是追求的目标。直观而言，与串行执行所有计算相比，并行执行大量计算会加快处理速度，这合乎直觉。事实上，应用程序通过在特定 GPU 实现上运行所获得的性能提升程度，通常完全取决于其可并行化的程度。但并行处理有多种不同方式。
+
+
+
+
+[0016] Conceptually, to speed up a process, one might have each parallel processor perform more work (see FIG. 1B) or one might instead keep the amount of work on each parallel processor constant and add more processors (see FIG. 1C). Consider an effort to repave a highway several miles long. You as the project manager want the repaving job done in the shortest amount of time in order to minimize traffic disruption. It is obvious that the road repaving project will complete more quickly if you have several crews working in parallel on different parts of the road. But which approach will get the job done more quickly - asking each road crew to do more work, or adding more crews each doing the same amount of work? It turns out that the answer depends on the nature of the work and the resources used to support the work.
+
+> 
+[0016] 从概念上讲，为了加速一个过程，可以让每个并行处理器承担更多的工作（参见图1B），或者保持每个并行处理器的工作量不变并增加处理器数量（参见图1C）。想象一下重新铺设一条数英里长的高速公路。作为项目经理，你希望在最短时间内完成重新铺设工作，以尽量减少交通中断。显然，如果你让多个施工队在不同路段并行作业，道路重铺项目会更快完成。但哪种方式能让工作更早结束——是要求每个道路施工队做更多的工作，还是增加更多施工队，每个队做相同量的工作？事实证明，答案取决于工作的性质以及用于支持工作的资源。
+
+
+
+
+[0017] Computer scientists refer to the first approach as
+
+> 
+[0017] 计算机科学家将第一种方法称为
+
+
+
+
+"weak scaling" and the second approach as "strong scaling." [0018] Users of such applications thus typically want strong scaling, which means a single application can achieve higher performance without having to change its workload -- for instance, by increasing its batch size to create more inherent parallelism. Users also expect increased speed performance when running existing (e.g., recompiled) applications on new, more capable GPU platforms offering more parallel processors. GPU development has met or even exceeded the expectations of the marketplace in terms of more parallel processors and more coordination/cooperation between increased numbers of parallel execution threads running on those parallel processors - but further performance improvements to achieve strong scaling are still needed.
+
+> 
+"弱扩展"和第二种方法为"强扩展"。[0018] 因此，此类应用程序的用户通常希望实现强扩展，这意味着单个应用程序无需改变其工作负载即可获得更高性能——例如，通过增加批次大小来创造更多内在并行性。用户也期望在新的、能力更强的GPU平台（提供更多并行处理器）上运行现有（如重新编译的）应用程序时能提升速度性能。GPU的发展在提供更多并行处理器以及增强这些处理器上运行的并行执行线程间的协调/协作方面，已满足甚至超出了市场预期——但为实现强扩展，仍需进一步的性能改进。
+
+
+
+
+[0019] Parallel processing also creates the need for communication and coordination between parallel execution threads or blocks. Synchronization primitives are an essential building block to parallel programming. Besides the functionality correctness such a synchronization primitives guarantees, they also contribute to improved performance and scalability.
+
+> 
+[0019] 并行处理也催生了并行执行线程或线程块之间通信与协调的需求。同步原语是并行编程的基本构建模块。除了保证功能正确性外，这类同步原语还有助于提升性能与可扩展性。
+
+
+
+
+[0020] One way for different execution processes to coordinate their states with one another is by using barrier synchronization. Barrier synchronization typically involves each process in a collection of parallel-executing processes waiting at a barrier until all other processes in the collection catch up. No process can proceed beyond the barrier until all processes reach the barrier.
+
+> 
+[0020] 不同执行进程之间协调各自状态的一种方法是使用屏障同步。屏障同步通常指一组并行执行的进程在屏障处等待，直到集合中所有其他进程都追赶上。在所有进程都到达屏障之前，没有任何进程可以越过屏障继续执行。
+
+
+
+
+[0021] In modern GPU architectures, many execution threads execute concurrently, and many warps each comprising many threads also execute concurrently. When threads in a warp need to perform more complicated communications or collective operations, the developer can use for example NVIDIA's CUDA " syncwarp" primitive to synchronize threads. The syncwarp primitive initializes hardware mechanisms that cause an executing thread to wait before resuming execution until all threads specified in a mask have called the primitive with the same mask. For more details see for example U.S. Pat. Nos. 8,381,203; 9,158,595; 9,442,755; 9,448,803; 10,002,031; and 10,013,290; and see also https://devblogs.nvidia.com/ using-cuda-warp-level-primitives/; and https://docs.nvi-dia.com/cuda/cuda-c-programming-guide/index.html#- memory-fence-functions.
+
+> 
+在现代 GPU 架构中，许多执行线程并发执行，且许多各自由多个线程组成的 warp 也并发执行。当 warp 中的线程需要执行更复杂的通信或集合操作时，开发者可以使用例如 NVIDIA 的 CUDA “syncwarp” 原语来同步线程。syncwarp 原语初始化硬件机制，使得执行线程暂停并等待，直到掩码中指定的所有线程都以相同的掩码调用了该原语后才恢复执行。更多细节可参见例如美国专利号 8,381,203；9,158,595；9,442,755；9,448,803；10,002,031；和 10,013,290；另请参见 https://devblogs.nvidia.com/ using-cuda-warp-level-primitives/；和 https://docs.nvi-dia.com/cuda/cuda-c-programming-guide/index.html#- memory-fence-functions。
+
+
+
+
+[0022] Before NVIDIA's Cooperative Groups API, both execution control (i.e., thread synchronization) and interthread communication were generally limited to the level of a thread block (also called a "cooperative thread array" or "CTA") executing on one SM. The Cooperative Groups API extended the CUDA programming model to describe synchronization patterns both within and across a grid or across multiple grids and thus potentially (depending on hardware platform) spanning across devices or multiple devices. The Cooperative Groups API provides CUDA device code APIs for defining, partitioning, and synchronizing groups of threads - where "groups" are programmable and can extend across thread blocks. The Cooperative Groups API also provides host-side APIs to launch grids whose threads are all scheduled by software-based scheduling to be launched concurrently. These Cooperative Groups API primitives enable additional patterns of cooperative parallelism within CUDA, including producer-consumer parallelism and global synchronization across an entire thread grid or even across multiple GPUs, without requiring hardware changes to the underlying GPU platforms.
+
+> 
+[0022] 在 NVIDIA 合作组 API 推出之前，执行控制（即线程同步）和线程间通信通常局限在单个 SM 上执行的线程块（亦称“协作线程数组”或 CTA）层面。合作组 API 扩展了 CUDA 编程模型，使其能够描述网格内部、跨网格乃至跨多个网格（因此在硬件平台支持下可能跨设备或跨多设备）的同步模式。该 API 提供了 CUDA 设备端代码接口，用于定义、划分和同步线程组——这里的“组”具备可编程性，可跨越线程块边界。合作组 API 还提供主机端接口，用于启动通过基于软件的调度实现所有线程并发执行的网格。这些合作组 API 原语使得 CUDA 能够实现新的协作并行模式，包括生产者-消费者并行以及跨越整个线程网格甚至多个 GPU 的全局同步，且无需对底层 GPU 平台进行硬件改动。
+
+
+
+
+[0023] For example, the Cooperative Groups API provides a grid-wide (and thus often device-wide) synchronization barrier ("grid.sync()") that can be used to prevent threads within the grid group from proceeding beyond the barrier until all threads in the defined grid group have reached that barrier. Such device-wide synchronization is based on the concept of a grid group ("grid_group") defining a set of threads within the same grid, scheduled by software to be resident on the device and schedulable on that device in such a way that each thread in the grid group can make forward progress. Thread groups could range in size from a few threads (smaller than a warp) to a whole thread block, to all thread blocks in a grid launch, to grids spanning multiple GPUs. Newer GPU platforms such as NVIDIA Pascal and Volta GPUs enable grid-wide and multi-GPU synchronizing groups, and Volta's independent thread scheduling enables significantly more flexible selection and partitioning of thread groups at arbitrary cross-warp and sub-warp granularities.
+
+> 
+[0023] 例如，协同组API提供了一个网格范围（因此通常也是设备范围）的同步屏障（"grid.sync()"），用于防止网格组内的线程越过屏障继续执行，直到所定义的网格组中的所有线程都达到了该屏障。这种设备范围的同步基于网格组（"grid_group"）的概念，该网格组定义了同一网格内的一组线程，由软件调度使其驻留在设备上，并且在该设备上可调度，使得网格组中的每个线程都能向前推进。线程组的规模可以从几个线程（小于一个warp）到整个线程块，再到一次网格启动中的所有线程块，乃至跨多个GPU的网格。更新的GPU平台，如NVIDIA Pascal和Volta GPU，支持网格范围和多GPU同步组，而Volta的独立线程调度使得能够在任意跨warp和子warp粒度上更加灵活地选择和划分线程组。
+
+
+
+
+[0024] There is still a need for faster synchronization that can improve the performance of a group of processes executing on multiple processors.
+
+> 
+[0024] 仍然需要更快的同步方式，以提升在多个处理器上执行的一组进程的性能。
+
+
+
+
+## BRIEF DESCRIPTION OF THE DRAWINGS
+
+[0025] FIG. 1A shows an example application running on a GPU.
+
+> 
+[0025] 图1A展示了一个在GPU上运行的示例应用程序。
+
+
+
+
+[0026] FIG. 1B shows a weak scaling deep learning scenario.
+
+> 
+[0026] 图1B展示了一个弱扩展深度学习场景。
+
+
+
+
+[0027] FIG. 1C shows a strong scaling deep learning scenario.
+
+> 
+[0027] 图1C示出了强扩展深度学习场景。
+
+
+
+
+[0028] FIG. 2 is a block architectural diagram of a GPU architecture including streaming multiprocessors and associated interconnects partitioned in to different $\mu \mathrm{{GPC}}$ partitions.
+
+> 
+[0028] 图2 是包含流式多处理器及相关互连并被划分到不同 $\mu \mathrm{{GPC}}$ 分区的 GPU 架构的框图。
+
+
+
+
+[0029] FIGS. 3A-3D are block diagrams showing example communication paths among streaming multiprocessors and memory in a GPU architecture such as that shown in FIG. 2. [0030] FIG. 4 is a conceptual illustration of a grid of Cooperative Group Arrays (CGAs), each comprising a plurality of thread blocks referred to as cooperative thread arrays (CTAs).
+
+> 
+[0029] 图3A-3D是展示如图2所示GPU架构中流多处理器与内存之间示例通信路径的框图。  
+[0030] 图4为合作组阵列（CGA）网格的概念示意图，每个CGA由多个被称为协作线程阵列（CTA）的线程块组成。
+
+
+
+
+[0031] FIG. 5A shows synchronized data exchange latency between two streaming multiprocessors (SM) through layer 2 memory (L2 cache) in accordance with a conventional synchronization scheme.
+
+> 
+[0031] 图5A示出了根据常规同步方案，通过第二层存储器（L2缓存）在两个流式多处理器（SM）之间进行同步数据交换的延迟。
+
+
+
+
+[0032] FIG. 5B shows an example data exchange sequence with synchronized data latency (remote) CGA memory best case according to a synchronization scheme.
+
+> 
+[0032] 图5B示出了根据同步方案的具有同步数据延迟（远程）CGA存储器最佳情况的示例数据交换序列。
+
+
+
+
+[0033] FIG. 5C shows another representation of the scheme shown in FIG. 5B.
+
+> 
+[0033] 图5C展示了图5B所示方案的另一种表示形式。
+
+
+
+
+[0034] FIG. 6A illustrates a producer process issuing a combined store and arrive operation, according to some example embodiments.
+
+> 
+[0034] 图6A根据一些示例实施例示出了生产者进程发出组合的存储和到达操作。
+
+
+
+
+[0035] FIG. 6B illustrates the use of split producer barriers that are local to the producer process, and split consumer barriers that are local to the consumer process, according to some example embodiments.
+
+> 
+[0035] 图6B示出了根据一些示例实施例的、使用生产者进程本地的拆分生产者屏障以及消费者进程本地的拆分消费者屏障。
+
+
+
+
+[0036] FIG. 6C illustrates an example of the synchronization according an example embodiment.
+
+> 
+[0036] 图6C示出了根据示例性实施例的同步的示例。
+
+
+
+
+[0037] FIG. 6D shows another example message flow according to example embodiments, and illustrates how the data exchange synchronization is achieved with approximately 0.5 roundtrip times latency.
+
+> 
+[0037] 图6D示出了根据示例实施例的另一示例消息流，并说明了如何以大约0.5个往返时间的延迟实现数据交换同步。
+
+
+
+
+[0038] FIG. 7A shows an arrive operation on a barrier updating a transaction count of the barrier with an expected transaction count, and each store operation incrementing the transaction count, according to some example embodiments.
+
+> 
+[0038] 图7A示出了根据一些示例实施例的在屏障上执行到达操作，利用预期事务计数更新屏障的事务计数，并且每个存储操作递增事务计数。
+
+
+
+
+[0039] FIG. 7B shows an example barrier structure, according to some embodiments.
+
+> 
+[0039] 图7B显示了根据一些实施例的一个示例性屏障结构。
+
+
+
+
+[0040] FIG. 7C shows an example instruction format for the combined store and arrive instruction, according to some example embodiments.
+
+> 
+[0040] 图7C示出了根据一些示例实施例的合并存储和到达指令的示例指令格式。
+
+
+
+
+[0041] FIG. 7D illustrates an example non-limiting manner in which the instruction format of FIG. 7C can be implemented in a fixed-size packet structure of a processor environment, according to some example embodiments.
+
+> 
+[0041] 图7D示出了根据一些示例实施例，可以如何在处理器环境的固定大小包结构中实现图7C的指令格式的一种示例性非限制性方式。
+
+
+
+
+[0042] FIG. 8 is a schematic block diagram of a hardware-implemented barrier support unit 800 in accordance with some example embodiments.
+
+> 
+[0042] 图8是根据一些示例实施例的硬件实现的屏障支持单元800的示意框图。
+
+
+
+
+[0043] FIG. 9A shows a conceptual view of four separate fence messages for the same barrier being replicated on multiple paths in an interconnect between two SMs, according to some example embodiments.
+
+> 
+[0043] FIG. 9A示出了根据一些示例实施例的、针对同一屏障的四个独立栅栏消息在两个SM之间的互连网络中的多条路径上被复制的概念视图。
+
+
+
+
+[0044] FIG. 9B shows configuration of a interconnect to carry L2 traffic, according to some example embodiments.
+
+> 
+[0044] 图9B示出了根据一些示例实施例的用于承载L2流量的互连的配置。
+
+
+
+
+[0045] FIG. 9C shows another example barrier structure, according to some embodiments.
+
+> 
+[0045] 图9C展示了根据一些实施例的另一示例性屏障结构。
+
+
+
+
+[0046] FIGS. 9D-9F illustrate three different data exchange models. FIG. 9D illustrates a conventional global memory based data exchange, with synchronization latency of 3 to 4 roundtrips. FIG. 9E illustrates a shared memory based SM2SM data exchange, with synchronization latency around 0.5 round-trip, according to some embodiments. FIG. 9F shows a layer 2-mediated SM2SM data exchange model in with synchronization latency is around two roundtrips.
+
+> 
+[0046] 图9D-9F示出了三种不同的数据交换模型。图9D示出了一种传统的基于全局内存的数据交换，其同步延迟为3到4个往返周期。图9E示出了一种基于共享内存的SM2SM数据交换，根据一些实施例，其同步延迟约为0.5个往返周期。图9F示出了一种由第二层中介的SM2SM数据交换模型，其中同步延迟约为两个往返周期。
+
+
+
+
+[0047] FIG. 9G shows SOL latency for L2-mediated SM2SM data exchange, according to some example embodiments.
+
+> 
+[0047] 图 9G 示出根据一些示例实施例的 L2 介导的 SM2SM 数据交换的 SOL 延迟。
+
+
+
+
+[0048] FIG. 9H shows a flowchart of SOL latency for L2- mediated SM-to-SM communication in a compute queue model implementation, according to some example embodiments.
+
+> 
+[0048] 图9H示出了根据一些示例实施例的计算队列模型实现中L2介导的SM到SM通信的SOL延迟的流程图。
+
+
+
+
+[0049] FIG. 9I shows an example implementation for the operations in FIG. 9H, according to some example embodiments.
+
+> 
+[0049] 图9I示出了根据一些示例实施例的图9H中的操作的示例实现方式。
+
+
+
+
+[0050] FIG. 10 illustrates an example parallel processing unit of a GPU, according to some embodiments.
+
+> 
+[0050] 图10示出了根据一些实施例的GPU的一个示例并行处理单元。
+
+
+
+
+[0051] FIG. 11A illustrates an example general processing cluster (GPC) within the parallel processing unit of FIG. 10 with each streaming multiprocessor in the general processing cluster being coupled to a tensor memory access unit, according to some embodiments.
+
+> 
+[0051] 根据一些实施例，图11A示出了图10的并行处理单元内的一个示例通用处理集群(GPC)，其中该通用处理集群中的每个流式多处理器均与张量内存访问单元耦合。
+
+
+
+
+[0052] FIG. 11B illustrates an example memory partition unit of the parallel processing unit of FIG. 10.
+
+> 
+[0052] 图11B示出了图10的并行处理单元的示例性存储器分区单元。
+
+
+
+
+[0053] FIG. 12 illustrates an example streaming multiprocessor of FIG. 11A.
+
+> 
+[0053] 图12示出了图11A的一个示例流式多处理器。
+
+
+
+
+[0054] FIG. 13A is an example conceptual diagram of a processing system implemented using the parallel processing unit (PPU) of FIG. 10.
+
+> 
+[0054] 图13A是使用图10的并行处理单元(PPU)实现的处理系统的示例概念图。
+
+
+
+
+[0055] FIG. 13B is a block diagram of an exemplary system in which the various architecture and/or functionality of the various previous embodiments may be implemented.
+
+> 
+[0055] 图13B是一个示例系统的框图，其中前述各个实施例的各种架构和/或功能可以被实现。
+
+
+
+
+## DETAILED DESCRIPTION OF EXAMPLE NON- LIMITING EMBODIMENTS
+
+[0056] Embodiments of this disclosure are directed to a new synchronization primitive, methods and systems. Example embodiments provide for producer processes and consumer processes, even if executing on respectively different processors, to synchronize with low latency, such as, for example, a latency of approximately half a roundtrip time incurred in memory access. This fast synchronization is referred to herein as "speed of light" (SOL) synchronization.
+
+> 
+[0056] 本公开的实施例涉及一种新的同步原语、方法和系统。示例性实施例提供了生产者进程和消费者进程，即使它们运行在各自不同的处理器上，也能以低延迟进行同步，该延迟例如约为内存访问所产生往返时间的一半。这种快速同步在本文中被称为“光速”（SOL）同步。
+
+
+
+
+[0057] Strong scaling was described above in relation to FIGS. 1A-1C, and refers to GPU design improvements such that the same amount of work (compared to a previous generation of GPU) can be performed at multiple times the speed on a faster processor. This effectively reduces the tile size allocated to each processor. To achieve strong scaling, GPU designers prefer to have tiles that are as small as possible. The shrinking per-processor, such as, for example, a streaming multiprocessor (SM), workload size tends to hurt data reuse and thus requires higher data feeding rate. On the other hand, the math throughput within a SM also tends to increase in each generation, which also demands for higher data feeding bandwidth.
+
+> 
+[0057] 上文结合图1A至1C描述了强扩展，它指的是GPU设计的改进，使得相同的工作量（与上一代GPU相比）能够在更快的处理器上以多倍的速度执行。这有效地减少了分配给每个处理器的分块大小。为实现强扩展，GPU设计人员倾向于尽可能小的分块。每处理器（例如，流式多处理器（SM））工作负载规模的缩小往往会损害数据重用，因此需要更高的数据馈送速率。另一方面，SM内的数学吞吐量在每一代中也趋于增加，这也要求更高的数据馈送带宽。
+
+
+
+
+[0058] Since wires are expensive and do not scale as well as processing bandwidth, brute-force adding wires for extra bandwidth is no longer a feasible option. Instead, embracing locality is viewed as a more promising design choice. The goal of the embodiments described herein is to enable efficient data sharing and localized communication at a level greater than one SM while minimizing synchronization latency. Besides new cross-SM cooperation mechanisms, proper synchronization primitives play a critical role in such design.
+
+> 
+[0058] 由于连线昂贵且扩展性不如处理带宽，粗暴地增加连线以获取额外带宽已不再是一种可行的选择。相反，采用局部性被视为更有前景的设计选择。本文所述实施例的目标是在超越单个SM的层面上实现高效的数据共享和局部化通信，同时最大限度地减少同步延迟。除了新的跨SM协作机制外，适当的同步原语在此类设计中起着关键作用。
+
+
+
+
+[0059] Conventionally, CUDA provides the hardware named barrier as its core synchronization primitive which mostly follows the BSP (Bulk Synchronous Parallel) model. The arrive-wait barrier described in U.S. Pat. Application No. 16/712,236 filed Dec. 12, 2019 was introduced to better serve the producer-consumer style synchronization. However, named barriers and arrive-wait barriers while highly useful, each have their own weaknesses. For example, a hardware named barrier is a dedicated processor-local resource that provides a limited number of barriers and which is difficult to expose to software, may be incompatible with the thread programming model, may provide inefficient support for producer-consumer communication, and may be hard to extend to cross-processor synchronization. The arrive-wait barrier does not suffer from many of these disadvantages but is often implemented as a shared-memory backed resource that provides a software-polling based wait operation. Such an arrive-wait barrier may incur a latency exposure and a substantial bandwidth cost to shared memory traffic. For example, given the extensive additional cross-processor guaranteed concurrency the CGA programming model provides, more efficient cross-processor asynchronous data exchange and associated synchronization could result in substantial performance improvements by reducing bandwidth requirements across long data paths between parallel processors.
+
+> 
+[0059] 传统上，CUDA 提供名为屏障的硬件机制作为其核心同步原语，该机制主要遵循 BSP（整体同步并行）模型。于 2019 年 12 月 12 日提交的美国专利申请第 16/712,236 号中描述的到达-等待屏障旨在更好地服务于生产者-消费者风格的同步。然而，命名屏障和到达-等待屏障虽极为有用，却各有自身的弱点。例如，硬件命名屏障是一种处理器本地专用资源，其提供的屏障数量有限，难以向软件暴露，可能与线程编程模型不兼容，对生产者-消费者通信的支持可能效率低下，并且可能难以扩展到跨处理器同步。到达-等待屏障则避免了其中许多缺点，但通常以共享内存支撑的资源形式实现，其等待操作基于软件轮询。此类到达-等待屏障可能导致延迟暴露，并对共享内存通信产生显著的带宽开销。例如，鉴于 CGA 编程模型提供了大量额外的跨处理器保障并发能力，更高效的跨处理器异步数据交换及相关同步可通过降低并行处理器之间长数据路径的带宽需求，带来可观的性能提升。
+
+
+
+
+## Overview of Example GPU Environment
+
+[0060] FIG. 2 shows an example GPU environment in which the new data synchronization may be implemented according to example embodiments.
+
+> 
+[0060] 图2示出了一个示例GPU环境，其中可以根据示例实施例实现新的数据同步。
+
+
+
+
+[0061] The illustrated GPU shows how some GPU implementations may enable plural partitions that operate as micro GPUs such as the shown micro GPU0 and micro GPU1, where each micro GPU includes a portion of the processing resources of the overall GPU. When the GPU is partitioned into two or more separate smaller micro GPUs for access by different clients, resources -- including the physical memory devices such as local L2 cache memories -- are also typically partitioned. For example, in one design, a first half of the physical memory devices coupled to micro GPU0 may correspond to a first set of memory partition locations and a second half of the physical memory devices coupled to micro GPU1 may correspond to a second set of memory partition locations. Performance resources within the GPU are also partitioned according to the two or more separate smaller processor partitions. The resources may include level two cache (L2) resources and processing resources. One embodiment of such a Multi-Instance GPU ("MIG") feature allows the GPU to be securely partitioned into many separate GPU Instances for CUDA ("Compute Unified Device Architecture") applications, providing multiple users with separate GPU resources to accelerate their respective applications. More particularly, each micro GPU includes a plurality of Graphic Processing Clusters (GPC) each with a plurality of SMs. Each GPC connects to the L2 cache via a crossbar interconnect.
+
+> 
+[0061] 所示的 GPU 展示了某些 GPU 实现如何启用多个分区以作为微 GPU 运行，例如所示的微 GPU0 和微 GPU1，其中每个微 GPU 包含整体 GPU 的一部分处理资源。当 GPU 被划分为两个或更多独立的小型微 GPU 以供不同客户端访问时，资源——包括本地 L2 高速缓存等物理存储设备——通常也会被分区。例如，在一种设计中，耦合到微 GPU0 的前一半物理存储设备可能对应第一组内存分区位置，而耦合到微 GPU1 的后一半物理存储设备则对应第二组内存分区位置。GPU 内的性能资源也会根据这两个或更多独立的小型处理器分区进行划分。这些资源可能包括二级缓存（L2）资源和处理资源。此类多实例 GPU（“MIG”）特性的一种实现方式允许将 GPU 安全地划分为多个独立的 GPU 实例，用于 CUDA（“统一计算设备架构”）应用程序，从而为多个用户提供独立的 GPU 资源以加速各自的应用程序。更具体地说，每个微 GPU 包含多个图形处理集群（GPC），每个 GPC 又包含多个 SM。每个 GPC 通过交叉开关互连连接到 L2 缓存。
+
+
+
+
+[0062] Each GPC includes a plurality of streaming multiprocessors (SM) that are each a massively parallel processor including a plurality of processor cores, register files, and specialized units such as load/store units, texture units, etc. A memory management unit (MMU) in each GPC interconnects the SMs on the same GPC, and also provides each SM with access to the memory including L2 cache and other memory. The GPCs in the same micro GPU are interconnected by a crossbar switch, and the micro-GPUs are interconnected by the respective crossbar switches. The GPU may additionally have copy engines and other IO units and links for external connections. For more information on prior GPU hardware and how it has advanced, see for example USP8,112,614; USP7,506,134; USP7,836,118; USP7,788,468; US10909033; US20140122809; Lindholm et al, "NVIDIA Tesla: A Unified Graphics and Computing Architecture," IEEE Micro (2008); https://docs.nvidia.com/ cuda/parallel-thread-execution/index.html (retrieved 2021); Choquette et al, "Volta: Performance and Programmability", IEEE Micro (Volume: 38, Issue: 2, Mar./April 2018), DOI: 10.1109/MM.2018.022071134.
+
+> 
+[0062] 每个GPC包含多个流式多处理器（SM），每个SM都是一个大规模并行处理器，包括多个处理器核心、寄存器文件以及专用单元，如加载/存储单元、纹理单元等。每个GPC中的内存管理单元（MMU）将同一GPC上的SM互连起来，并为每个SM提供对内存的访问，包括L2缓存和其他内存。同一微型GPU内的GPC通过交叉开关互连，而各微型GPU之间则通过各自的交叉开关连接。该GPU还可能具备复制引擎和其他IO单元以及用于外部连接的链路。有关先前GPU硬件及其演进的更多信息，参见例如USP8,112,614；USP7,506,134；USP7,836,118；USP7,788,468；US10909033；US20140122809；Lindholm等人，“NVIDIA Tesla: 统一图形与计算架构”，《IEEE Micro》（2008年）；https://docs.nvidia.com/cuda/parallel-thread-execution/index.html（2021年检索）；Choquette等人，“Volta: 性能与可编程性”，《IEEE Micro》（第38卷，第2期，2018年3/4月），DOI: 10.1109/MM.2018.022071134。
+
+
+
+
+[0063] FIGS. 3A-3D show schematic illustrations of example inter-SM communication within a GPC in an example GPU such as that shown in FIG. 2. Inter-SM communication ("SM2SM" communication) occurs when a first SM transmits a message via a MMU to a crossbar that interconnects all the SMs in the GPC. Memory access requests to the L2 cache, are communicated through the same crossbar interconnect to the L2 cache. In some embodiments, the GPU includes a distributed memory such that inter-SM communication may include data operations from one SM to a portion of another SMs memory. An example distributed memory feature is described in U.S. Application No. 17/ 691,690. One of the messages that an SM can communicate to another SM is the local cga id of a CTA the SM is executing (CGA are described below in relation to FIG. 4). In one embodiment, the packet format of such an SM-to-SM message includes a U008 field "gpc_local_cga_id". Each GPC has its own pool of CGA IDs, and GPM allocates one of those numbers to a CGA upon launch of that CGA. This assigned number then serves e.g., as a pointer into the DSMEM distributed memory segments that are being used by the various CTAs in the CGA. In one embodiment, the "gpc_local_cga_id" also serves as the id for tracking barrier state for each GPC_CGA.
+
+> 
+[0063] 图3A至图3D示出了在如图2所示的示例性GPU中GPC内SM间通信的示意性图示。当第一SM经由MMU向连接GPC中所有SM的交叉开关发送消息时，即发生SM间通信（“SM2SM”通信）。对L2高速缓存的存储器访问请求，通过同一交叉开关互连传输至L2高速缓存。在一些实施例中，GPU包含分布式内存，使得SM间通信可包括从一个SM到另一SM内存一部分的数据操作。美国专利申请第17/691,690号中描述了一个示例分布式内存特性。SM可以向另一SM通信的消息之一是SM正在执行的CTA的本地cga id（CGA在下文参照图4描述）。在一个实施例中，此类SM到SM消息的分组格式包含一个U008字段“gpc_local_cga_id”。每个GPC都有自己的CGA ID池，GPM在启动CTA时将这些编号之一分配给该CTA。此分配的编号随后例如用作指向该CGA中各个CTA正在使用的DSMEM分布式内存段的指针。在一个实施例中，“gpc_local_cga_id”还用作跟踪每个GPC_CGA屏障状态的id。
+
+
+
+
+[0064] FIG. 4 illustrates an arrangement of blocks of threads in a Cooperative Group Array (CGA), according to some embodiments. A CGA is a new programming/execution model and supporting hardware implementation and is described in the concurrently filed U.S. Pat. Application No. 17/691,621, which is herein incorporated by reference in its entirety. In some embodiments, the fast data synchronization described in this disclosure relies upon the CGA programming/execution model. The CGA programming/execution model enables adjacent tiles to be launched into SMs on the same GPC.
+
+> 
+[0064] 图4展示了根据一些实施例的协作组阵列（CGA）中线程块的布置。CGA是一种新的编程/执行模型及支持硬件实现，并在同时提交的美国专利申请号17/691,621中有所描述，该申请通过引用整体并入本文。在一些实施例中，本公开所描述的快速数据同步依赖于CGA编程/执行模型。CGA编程/执行模型使相邻图块能够被启动到同一GPC上的SM中。
+
+
+
+
+[0065] In one embodiment, a CGA is a collection of CTAs where hardware guarantees that all CTAs of the CGA are launched to the same hardware organization level the CGA specifies or is associated with. The hardware is configured to make sure there are enough processing resources in the target hardware level to launch all CTAs of the CGA before launching any.
+
+> 
+[0065] 在一个实施例中，CGA 是一组 CTA，硬件保证该 CGA 中的所有 CTA 都被启动到该 CGA 所指定或关联的同一硬件组织层级。硬件被配置为确保在启动任何 CTA 之前，目标硬件层级中有足够的处理资源来启动该 CGA 的所有 CTA。
+
+
+
+
+[0066] As FIG. 4 shows, a CGA is a grid of clusters of thread blocks or CTAs organized as an array. Such CGAs provide co-scheduling, e.g., control over where clusters of CTAs are placed/executed in the GPU, relative to the memory required by an application and relative to each other. This enables applications to see more data locality, reduced latency, and better synchronization between all the threads in tightly cooperating clusters of CTAs.
+
+> 
+[0066] 如图 4 所示，CGA 是一个以数组形式组织的线程块（或 CTA）簇的网格。此类 CGA 提供了协同调度，例如，控制 CTA 簇在 GPU 中的放置/执行位置，既要考虑应用程序所需的内存，又要考虑彼此之间的相对位置。这使得应用程序能够获得更高的数据局部性、更低的延迟，并让紧密协作的 CTA 簇中的所有线程之间实现更佳的同步。
+
+
+
+
+[0067] For example, CGAs let an application take advantage of the hierarchical nature of the interconnect and caching subsystem in modern GPUs and make it easier to scale as chips grow in the future. By exploiting spatial locality, CGAs allow more efficient communication and lower latency data movement. GPU hardware improvements guarantee that threads of plural CTAs the new CGA hierarchical level(s) define will run concurrently for desired spatial localities, by allowing CGAs to control where on the machine the concurrent CTA threads will run relative to one another.
+
+> 
+[0067] 例如，CGA 让应用程序能够利用现代 GPU 中互连和缓存子系统的层次特性，并随着未来芯片的增长更容易扩展。通过利用空间局部性，CGA 实现了更高效的通信和更低延迟的数据移动。GPU 硬件改进保证，由新的 CGA 层级所定义的多个 CTA 的线程将为实现所需的空间局部性而并发运行，其方式是允许 CGA 控制并发 CTA 线程在机器上相对于彼此运行的位置。
+
+
+
+
+[0068] In one embodiment, CGAs are composed of clusters of CTAs that are guaranteed by hardware to launch and execute simultaneously/concurrently. The CTAs in a CGA cluster may -- and in the general case will - execute on different SMs within the GPU. Even though the CTAs execute on different SMs, the GPU hardware/system nevertheless provides a cross-SM guarantee that the CTAs in a CGA cluster will be scheduled to execute concurrently. The GPU hardware/system also provides efficient mechanisms by which the concurrently-executing CTAs can communicate with one another. This allows an application to explicitly share data between the CTAs in a CGA cluster and also enables synchronization between the various threads of the CTAs in the CGA cluster.
+
+> 
+[0068] 在一个实施例中，CGA由一组CTA集群组成，硬件保证它们能同时/并发地启动和执行。CGA集群中的CTA可能——并且在一般情况下将会——在GPU内的不同SM上执行。即使CTA在不同的SM上执行，GPU硬件/系统仍然提供跨SM保证，即CGA集群中的CTA将被调度为并发执行。GPU硬件/系统还提供了高效的机制，使得并发执行的CTA能够相互通信。这使得应用程序可以在CGA集群中的CTA之间显式共享数据，并且还能实现CGA集群中各个CTA的线程之间的同步。
+
+
+
+
+[0069] In example embodiments, the various threads within the CGA cluster can read/write from common shared memory -- enabling any thread in the CGA cluster to share data with any other thread in the cluster. Sharing data between CTAs in the CGA cluster saves interconnect and memory bandwidth which is often the performance limiter for an application.
+
+> 
+[0069] 在示例性实施例中，CGA 集群内的各个线程可从公共共享内存进行读/写操作——使得该 CGA 集群中的任一线程能够与集群内的任何其他线程共享数据。在 CGA 集群的 CTA 之间共享数据可节省互连与内存带宽，而带宽往往是应用程序的性能限制因素。
+
+
+
+
+[0070] Now, using the concurrent execution and additional shared memory supported by hardware, it is possible to directly share data between threads of one CTA and threads of another CTA - enabling dependencies across CTAs that can bridge hardware (e.g., cross-SM) partitions.
+
+> 
+[0070] 现在，借助硬件支持的并发执行和额外共享内存，可以直接在一个 CTA 的线程与另一个 CTA 的线程之间共享数据——实现跨 CTA 的依赖关系，从而桥接硬件（例如，跨 SM）分区。
+
+
+
+
+[0071] Because CGAs guarantee all their CTAs execute concurrently with a known spatial relationship, other hardware optimizations are possible such as: Multicasting data returned from memory to multiple SMs (CTAs) to save interconnect bandwidth as in embodiments of this disclosure; Direct SM2SM communication for lower latency data sharing and improved synchronization between producer and consumer threads in the CGA; Hardware barriers for synchronizing execution across all (or any) threads in a CGA; and more (see copending commonly-assigned patent applications listed above).
+
+> 
+[0071] 因为CGA保证其所有CTA以已知的空间关系并发执行，因此可能实现的其他硬件优化包括：将从存储器返回的数据多播至多个SM（CTA），以节省互连带宽，如本公开的实施例所示；直接的SM2SM通信，以实现更低延迟的数据共享，并改善CGA中生产者与消费者线程之间的同步；硬件屏障，用于同步CGA中所有（或任意）线程的执行；等等（参见上文列出的共同拥有的待审专利申请）。
+
+
+
+
+[0072] The additional cluster overlay provided by the CGA defines where and when the CTAs will run, and in particular, guarantees that all CTAs of a CGA will run concurrently within a common hardware domain that provides dynamic sharing of data, messaging and synchronization between the CTAs.
+
+> 
+[0072] 由 CGA 提供的附加集群覆盖层定义了 CTA 在何处以及何时运行，尤其是保证了某个 CGA 的所有 CTA 会在一个提供 CTA 之间数据、消息传递和同步动态共享的公共硬件域内并发运行。
+
+
+
+
+[0073] In example embodiments, all CTA threads within a CGA may reference various types of commonly-accessible shared memory. Hardware support in the GPU allows the different CTAs in a CGA cluster to read and write each other's shared memory. Thus, load, store and atomic memory accesses by a first CTA can target shared memory of a second CTA, where the first and second CTAs are within the same CGA cluster. In some embodiments, the source multicast SM writes to the receiver multicast SMs in their respective memories using a distributed memory mechanism. An example distributed memory that may be used in embodiments is described in U.S. Application No. 17/691,690, which is incorporated herein by reference in its entirety. In some example embodiments, the distributed shared memory of the respective SMs is mapped into generic address space.
+
+> 
+[0073] 在示例实施例中，CGA内的所有CTA线程可引用多种类型的可共同访问的共享内存。GPU中的硬件支持允许CGA集群中的不同CTA相互读写彼此的共享内存。因此，第一个CTA的加载、存储和原子内存访问可以针对第二个CTA的共享内存，其中第一个和第二个CTA位于同一CGA集群内。在一些实施例中，源多播SM使用分布式内存机制向接收方多播SM的各自内存中写入。实施例中可能使用的一种示例分布式内存记载于美国申请第17/691,690号中，该申请通过引用整体并入本文。在一些示例实施例中，各个SM的分布式共享内存被映射到通用地址空间。
+
+
+
+
+## The Problem of Synchronization
+
+[0074] In a parallel processing multiprocessor system, communication between processors using memory located data "objects" may be slowed significantly by the latency involved in using memory barriers for synchronizing processes running on the different processors. An example of a memory barrier is a flag variable or other memory data structure that can be used to control the order of certain operations. Typically, a "producer" thread executing on one processor writes (also interchangeably referred to as "stores") a buffer into memory, then writes a flag variable in memory to indicate the data is ready to be read (also interchangeably referred to as "load") by a "consumer" thread executing on another processor. In many systems, between the last data write and the flag write, a memory fence or barrier operation is used to ensure the data writes are ordered before the flag write. This is done in order to prevent the consumer thread from seeing incomplete, non-updated or corrupted data.
+
+> 
+在并行处理多处理器系统中，处理器之间使用内存中的“数据对象”进行通信时，由于需要借助内存屏障来同步运行于不同处理器上的进程，通信速度可能会因延迟而显著降低。内存屏障的一个例子是标志变量或其他内存数据结构，可用于控制某些操作的顺序。通常，在一个处理器上执行的“生产者”线程会将缓冲区写入（亦称为“存储”）内存，然后写入内存中的标志变量，以表示数据已准备好供另一个处理器上执行的“消费者”线程读取（亦称为“加载”）。在许多系统中，在最后一次数据写入与标志写入之间，会使用内存栅栏或屏障操作，以确保数据写入的顺序先于标志写入。这样做是为了防止消费者线程看到不完整、未更新或损坏的数据。
+
+
+
+
+[0075] Generally this fence or barrier is expensive. That is, it has long latency. For example, FIG. 5A shows a conventional synchronized data exchange between two SMs (SM0, SM1) through a shared L2 cache in accordance with a conventional synchronization scheme. While the L2 cache is relatively close to SM0 and SM1 in the memory hierarchy, each L2 cache access represents a delay that increases latency.
+
+> 
+[0075] 通常，这种栅栏或屏障开销较大，即延迟很长。例如，图5A展示了根据常规同步方案，两个SM（SM0，SM1）通过共享的L2缓存进行的常规同步数据交换。尽管L2缓存在内存层次结构中相对靠近SM0和SM1，但每次L2缓存访问都会带来延迟，从而增加整体时延。
+
+
+
+
+[0076] The illustrated scenario involves SM1 as the consumer for data stored by producer SM0 in the L2 slice of SM0 ("L2 slice 0") and in the L2 slice of SM1 ("L2 slice 1"). After the storing of data D0 and D1 to L2 slice 0 and L2 slice 1 respectively, producer SM0 waits for "ack" messages from the L2 caches for the memory barriers ("membar") that were issued for the stored data, whereupon it updates a "flag F" to indicate that the data storing is complete. The membar instructions instruct the hardware to ensure visibility of the stored data to subsequent instructions such as those executed by consumer SM1. SM1 can acquire the flag F, as is necessary to load the stored data, only after SM0 updates the flag F by. Upon querying the L2 slices and successfully acquiring flag F, SM1 proceeds to load the data D0 and D1. [0077] While the above sequence of operations successfully ensures synchronization of data between the producer and the consumer, three or four roundtrips of latency to/from the L2 cache may be consumed in the sequence from the time SM0 issues the store instructions to the time SM1 obtains the data in response to a load instruction,. Thus, according to this conventional scheme, the exchange of data incurs a latency cost of 3 to 4 roundtrips through the L2 cache.
+
+> 
+[0076] 图示情景中，SM1 是消费者，用于获取生产者 SM0 存储在 SM0 的 L2 切片（“L2 切片 0”）和 SM1 的 L2 切片（“L2 切片 1”）中的数据。在分别将数据 D0 和 D1 存储到 L2 切片 0 和 L2 切片 1 之后，生产者 SM0 等待来自 L2 缓存的、针对已存储数据发出的内存屏障（“membar”）的“ack”消息，随后更新“flag F”以表明数据存储已完成。membar 指令指示硬件确保所存储数据对后续指令（例如消费者 SM1 执行的指令）的可见性。只有在 SM0 更新了 flag F 之后，SM1 才能获取该 flag F（这是加载所存储数据所必需的）。SM1 在查询 L2 切片并成功获取 flag F 后，继续加载数据 D0 和 D1。 [0077] 虽然上述操作序列成功地确保了生产者与消费者之间的数据同步，但在从 SM0 发出存储指令到 SM1 通过加载指令获取数据的过程中，序列可能消耗三到四次往返 L2 缓存的延迟。因此，按照这种传统方案，数据交换会带来 3 到 4 次往返 L2 缓存的延迟代价。
+
+
+
+
+[0078] A new generation of NVIDIA GPU implements various schemes for efficient producer/consumer parallelism for data orchestration, including, for example, inter-SM communication supporting SMs accessing memory of other SMs (described in U.S. Application No. 17/691,690; multicast over distributed shared memory (described in U.S. Application No. 17/691,288; and tensor memory access unit (described in U.S. Application No. 17/691,276 and in U.S. Application No. 17/691,422). In systems in which there exists shared memory with remote store capabilities in which SMs can access memory of other SMs without going through the memory hierarchy such as the L2 cache, the latency can be significantly reduced, provided that the data and the flag are co-located in the memory of one of the SMs such as the consumer SM. To exchange data in such systems taking advantage of the remote CGA store capabilities, the latency cost of data exchange may be decreased from the 3-4 of FIG. 5A to the equivalent of approximately 1.5 round trips through the L2 cache (assuming SM-to-SM latency is roughly equal to SM to L2 latency).
+
+> 
+新一代NVIDIA GPU实施了多种高效的生产者/消费者并行数据编排方案，包括例如支持SM访问其他SM存储器的SM间通信（记载于美国申请第17/691,690号）；分布式共享内存上的多播（记载于美国申请第17/691,288号）；以及张量内存访问单元（记载于美国申请第17/691,276号及第17/691,422号）。在那些具备远程存储能力的共享内存系统中，SM无需经过内存层次结构（如L2缓存）即可访问其他SM的存储器，如果数据与标志同置于某个SM（如消费者SM）的存储器中，延迟可显著降低。可通过利用远程CGA存储能力，将数据交换的延迟成本从图5A中所示的3到4次降至相当于约1.5次通过L2缓存的往返（假设SM到SM的延迟大致等于SM到L2的延迟）。
+
+
+
+
+[0079] FIG. 5B shows an example data exchange sequence with synchronized data latency (remote) CGA memory best case according to a particular synchronization scheme. In the illustrated scenario, SM0 (more accurately, a thread running on SM0) stores the data D0 and D1 to the shared memory of SM1 (see U.S. Application No.17/ 691,690, which describes distributed shared memory). This is like dropping groceries off on your elderly neighbor's doorstep - instead of running to the grocery store herself, your neighbor need only open her front door to get the groceries.
+
+> 
+[0079] 图5B示出了根据特定同步方案的具有同步数据延迟（远程）CGA存储器最佳情况的示例数据交换序列。在所描绘的场景中，SM0（更准确地说，是在SM0上运行的线程）将数据D0和D1存储到SM1的共享内存（参见描述分布式共享内存的美国申请号17/ 691,690）。这就像把杂货放在年迈邻居的门阶上——邻居无需亲自跑去杂货店，只需打开前门就能拿到杂货。
+
+
+
+
+[0080] Upon receiving the acknowledgments for the stored data, the producer SM0 updates a flag F in the shared memory (SMEM) of SM1 to indicate that the stored data is available (like ringing your neighbor's doorbell after dropping off the groceries except that the flag remains set for whenever the consumer SM1 cares to read it). The consumer thread on SM1 can wait on the flag F which is local in the consumer SM1's own shared memory (and if necessary, can "acquire" the flag when it is updated by SM0) before issuing the load for the newly written data D0 and D1 out of its own local memory. This data exchange, assuming that the SM-to-SM communication through shared memory has latency that is roughly equal to the latency of SM-to-L2, incurs a latency cost of only approximately 1.5 roundtrips because the amount of time it takes for SM1 to read from its own local memory is very fast.
+
+> 
+[0080] 在收到已存储数据的确认后，生产者SM0更新SM1的共享内存（SMEM）中的一个标志F，以指示存储的数据已可用（就像送货后按邻居的门铃，只是这个标志会保持置位，直到消费者SM1任何时候想要读取它）。SM1上的消费者线程可以在发出加载新写入数据D0和D1（从其本地内存）的指令之前，等待这个位于消费者SM1自己的共享内存中的本地标志F（如有必要，可以在SM0更新标志时“acquire”该标志）。假设通过共享内存进行的SM到SM通信，其延迟大致等于SM到L2的延迟，那么这种数据交换仅产生约1.5次往返的延迟成本，因为SM1从其本地内存读取所需的时间非常快。
+
+
+
+
+[0081] Each scheme for efficient producer/consumer parallelism for data orchestration, such as the schemes for efficient producer/consumer parallelism noted above, addresses the same fundamental two synchronization challenges:
+
+> 
+[0081] 每种用于数据编排的高效生产者/消费者并行方案，如上文提到的那些高效生产者/消费者并行方案，都解决了相同的两个基本同步挑战：
+
+
+
+
+[0082] (A) When is the consumer ready to receive new data (e.g., a tile has become dead)? and
+
+> 
+[0082] (A) 消费者何时准备好接收新数据（例如，某个瓦片已失效）？以及
+
+
+
+
+[0083] (B) When is the consumer ready to begin processing filled data (e.g., a tile has become alive)?
+
+> 
+[0083] （B）消费者何时准备好开始处理已填充的数据（例如，某个图块已变为活跃）？
+
+
+
+
+[0084] The embodiments described in this disclosure solve these two problems using the same unified mechanism, as they are fundamentally two sides of the same coin. The embodiments leverage some aspects of the arrive-wait barriers, introduced in a previous generation of NVIDIA GPU, as the basis for producer/consumer communication. Although the embodiments are described in this disclosure primarily in relation to shared memory, some embodiments may be applied to global memory or combinations of shared memory and global memory.
+
+> 
+[0084] 本公开中描述的实施例利用相同的统一机制解决了这两个问题，因为它们本质上是同一枚硬币的两面。这些实施例利用了前一代 NVIDIA GPU 中引入的到达-等待屏障的某些方面，作为生产者/消费者通信的基础。尽管本公开中描述的实施例主要涉及共享内存，但某些实施例也可以应用于全局内存，或者共享内存与全局内存的组合。
+
+
+
+
+[0085] Consider a producer and consumer communicating through shared memory. FIG. 5C shows another representation of the scheme shown in FIG. 5B. In the scenario shown
+
+> 
+[0085] 考虑一个生产者和消费者通过共享内存进行通信。图5C展示了图5B所示方案的另一种表示。在所示的场景中
+
+
+
+
+in FIG. 5C, the shared memory buffers are represented as "Tile 0" and "Tile 1". Flags "barrier 0" and "barrier 1" are configured to synchronize data exchange on Tile 0 and Tile 1, respectively. The producer performs a remote Store-Shared (shown "STS") operation to write data to Tile 0 using a data movement scheme (such as e.g., using the tensor memory access unit (TMAU) as described in (6610-91) or programmatic multicast described in 6610-97), and then uses an arrive operation on "barrier 0" to indicate the presence of the data in Tile 0. The producer's arrive operation releases the consumer from its wait() on barrier 0 . Similar synchronization occurs on Tile 1 based on barrier 1. Conversely, after being released from its wait() operation on a barrier, the consumer processes the tile and then uses an arrive on the corresponding barrier to release the producer from the wait() operation of the producer. Therefore, the producer and consumer use different semantic interpretations of arrive and wait in order to synchronize. For the producer, arrive represents "tile has become dead" (a situation in which the consumer consumes the data of the tile, and the tile has become empty). For the consumer, arrive represents "tile has become live" (a situation in which the producer has stored data to the tile, and the tile has data to be consumed). [0086] Example embodiments further address a practical issue relating to reliance on the memory ordering between the store operation and the arrive operation. In massively parallel multithreaded machines, operations are sometimes or even often opportunistically performed out of order in order to reduce execution latency. For example, the store operation and the arrive operation may be often reordered in the GPU e.g., due to hit under miss, or differing transfer distances from L2 slices. In situations in which both the producer and consumer are on the same SM, reordering does not, or is very unlikely to, occur frequently. For example, the "ARRIVES.LDGSTSBAR" instruction, introduced in a previous generation of Nvidia GPUs, depends on the producer performing the data store instruction "LDGSTS" and the consumer issuing the load "LDS" being on the same SM. However, with the introduction of CGAs, multiple CTAs running on different SMs may now be synchronizing across SM boundaries. While the CTAs are all guaranteed to be running concurrently, the concurrency guarantee in one embodiment does not extend to ordering execution on one SM relative to execution on another SM(s). Without solving this problem of maintaining ordering in the face of possible re-ordering of store operations and arrive operations when producer and consumer are on different SMs, the arrive/wait technique of synchronization may not be very useful for distributed producer/consumer synchronization. Accordingly, some embodiments include solutions for maintaining such ordering across SM boundaries.
+
+> 
+在图5C中，共享内存缓冲区表示为“瓦片0”和“瓦片1”。标志“屏障0”和“屏障1”分别配置用于同步瓦片0和瓦片1上的数据交换。生产者执行远程存储-共享（示为“STS”）操作，使用数据移动方案（例如，如6610-91中描述的，使用张量内存访问单元（TMAU）或6610-97中描述的可编程多播）将数据写入瓦片0，然后对“屏障0”使用到达操作，以指示瓦片0中存在数据。生产者的到达操作使消费者从其对屏障0的wait()中释放。基于屏障1，在瓦片1上发生类似的同步。相反，消费者在从屏障的wait()操作中释放后，处理该瓦片，然后对相应屏障使用到达操作，以使生产者从生产者的wait()操作中释放。因此，生产者和消费者使用到达和等待的不同语义解释来进行同步。对生产者而言，到达表示“瓦片已变空”（消费者消费了瓦片中的数据，瓦片变为空的情况）。对消费者而言，到达表示“瓦片已变活跃”（生产者已将数据存储到瓦片，瓦片中有待消费的数据的情况）。[0086] 示例实施例还解决了与依赖存储操作和到达操作之间的内存顺序相关的实际问题。在大规模并行多线程机器中，操作有时甚至经常被机会主义地乱序执行，以降低执行延迟。例如，在GPU中，存储操作和到达操作可能经常被重排序，例如由于命中未命中或来自L2片的传输距离不同。在生产者和消费者都在同一SM上的情况下，重排序不会或极不可能频繁发生。例如，前代Nvidia GPU中引入的“ARRIVES.LDGSTSBAR”指令依赖于生产者执行数据存储指令“LDGSTS”并且消费者发出加载“LDS”在同一SM上。但是，随着CGA的引入，运行在不同SM上的多个CTA现在可能跨SM边界进行同步。虽然保证所有CTA都并发运行，但在一个实施例中，并发性保证不扩展到相对于另一SM上的执行对一个SM上的执行进行排序。如果不解决当生产者和消费者在不同SM上时存储操作和到达操作可能重排序的问题，那么用于同步的到达/等待技术对于分布式生产者/消费者同步可能不太有用。因此，一些实施例包括用于维护跨SM边界的这种排序的解决方案。
+
+
+
+
+## Improved Synchronization in NUMA-organized Systems
+
+[0087] When threads running on multiple processors in a non-uniform memory access (NUMA)-organized system (or subsystem) are aware of the location of the thread they are communicating with (for example, which processor it is on) and are able to target the communication data writes and flag write to the memory physically associated with that destination processor, then there is an opportunity to achieve optimally fast data synchronization. The optimally fast data synchronization is achieved by updating the flag mentioned above immediately (or without significant delay) after writing the data.
+
+> 
+[0087] 当运行在非一致性内存访问（NUMA）组织的系统（或子系统）中多个处理器上的线程，知晓它们所通信线程的位置（例如，位于哪个处理器），并能够将通信数据写入和标志写入定向到与目标处理器物理关联的内存时，便有机会实现最优快速的数据同步。最优快速的数据同步通过在写入数据后立即（或无显著延迟地）更新上述标志来实现。
+
+
+
+
+[0088] In order to solve the problem of maintaining ordering in the face of possible re-ordering of stores and arrives, example embodiments provide a new combined (remote) store and arrive ("STS+Arrive") instruction. In an implementation, upon receipt of the combined store and arrive operation in the destination processor, the data is written to a receive buffer, and a barrier, on which another process (a consumer thread) may perform a wait() operation to obtain access to the receive buffer in order to read the data, is updated to indicate that the data has been written. This instruction specifies two addresses in the same SM shared memory: (A) the address to write the data to (e.g., an address associated with the receive buffer), and (B) the address of a barrier to update when the store is completed. According to one implementation, a parameter for the wait() operation to be cleared is set to be equal to the number of lines (T) in the tile. Thus the consumer thread passing (i.e. being able to process instructions beyond) the barrier indicates that the tile has been filled. Note that T is a free variable (as is the number of resident tiles), and so software can adjust the space-latency tradeoff in order to hide average fill latency for tiles.
+
+> 
+[0088] 为了解决在可能出现存储和到达操作重排序的情况下维持顺序的问题，示例实施例提供了一种新的组合式（远程）存储与到达（“STS+Arrive”）指令。在一种实现方式中，当目标处理器接收到该组合存储与到达操作时，数据被写入接收缓冲区，并且一个屏障会被更新以指示数据已写入，而另一个进程（消费者线程）可以对该屏障执行 wait() 操作来获得对接收缓冲区的访问权限，以便读取数据。该指令在同一 SM 共享内存中指定两个地址：（A）写入数据的目标地址（例如，与接收缓冲区关联的地址），以及（B）当存储完成时需要更新的屏障地址。根据一种实现，为 wait() 操作待清除的参数设置为等于瓦片中行数（T）。因此，消费者线程通过（即能够执行超出屏障的指令）该屏障就表明该瓦片已被填满。注意，T 是一个自由变量（常驻瓦片的数量也是），软件可以调整空间——延迟的权衡，以隐藏针对瓦片的平均填充延迟。
+
+
+
+
+[0089] The scenario of FIG. 6A illustrates the producer issuing a remote combined store and arrive instruction. This scheme can seamlessly extend to multiple producers each storing a separate section of the same tile, as the consumer may be agnostic to the source of the arrive operations. [0090] However, this scheme shown in FIG. 6A still has what may be a shortcoming: it relies on the producer performing a remote wait() on the consumer SM's barrier which the producer has written into the consumer's local memory - meaning it is now remote to the producer. This remote wait() can be expensive and/or in some cases even impractical to implement due, for example, to the cost of implementing remote polling. The techniques described in this disclosure improve upon the above for a solution that avoids performing such a remote wait() operation.
+
+> 
+[0089] 图6A的场景展示了生产者发出远程的组合存储与到达指令。这一方案可以无缝扩展到多个生产者各自存储同一瓦片的不同部分，因为消费者可能无需知晓到达操作的来源。
+
+[0090] 然而，图6A所示方案仍存在可能的不足：它依赖生产者在消费者SM的屏障上执行远程等待()操作，而该屏障是由生产者写入消费者本地内存的——这意味着它对生产者而言是远程的。由于实现远程轮询的代价等原因，这种远程等待()可能开销高昂，甚至在某些情况下难以实现。本公开描述的技术对上述方案进行了改进，提供了一种避免执行此类远程等待()操作的解决方案。
+
+
+
+
+[0091] In one embodiment, the remote wait() is avoided by splitting the synchronization functionality across two barriers: one co-located with the consumer, and one colocated with the producer. This imposes a relatively minor space overhead, yet removes all need for remote wait() functionality. In this scheme, the "c-barrier" (a barrier co-located with the consumer) is waited on (e.g. using wait() instruction) by the consumer and arrived on (e.g. using arrive()) by the producer. Conversely the "p-barrier" (a barrier colocated with the producer) is arrived on by the consumer and waited on by the producer.
+
+> 
+[0091] 在一个实施例中，通过将同步功能拆分到两个屏障上来避免远程wait()：一个与消费者共置，一个与生产者共置。这带来了相对较小的空间开销，却消除了对远程wait()功能的所有需求。在该方案中，“c-barrier”（与消费者共置的屏障）由消费者等待（例如使用wait()指令）并由生产者到达（例如使用arrive()）。相反，“p-barrier”（与生产者共置的屏障）由消费者到达并由生产者等待。
+
+
+
+
+[0092] The embodiments according to FIGS. 6B-6D introduces an improved instruction set architecture (ISA) feature - namely the combined store and arrive instruction, a new form of store instruction, and associated memory transactions in which a data write and a separate flag update are packaged together as one combined operation. The at least two addresses in the instruction, the data address and the barrier (flag) address, each map to the memory associated with a thread on a destination processor in the NUMA-organized system or subsystem. The new store instruction also takes a data operand. The new store instruction's effect is to first write the data specified by the data operand at the data address, and then update the flag or barrier at the barrier address. The update to the flag is performed substantially simultaneously to the writing of the data, so that no significant delay between the two operations exist in which another change to the written data could occur.
+
+> 
+[0092] 根据图6B-6D的实施例引入了一种改进的指令集架构（ISA）特性——即组合存储与到达指令，这是一种新形式的存储指令，以及相关的内存事务，其中数据写入和单独的标志更新被打包为一个组合操作。该指令中的至少两个地址，即数据地址和屏障（标志）地址，各自映射到NUMA组织系统或子系统中目标处理器上与线程相关联的内存。该新存储指令还接受一个数据操作数。该新存储指令的效果是首先将数据操作数指定的数据写入数据地址处，然后更新屏障地址处的标志或屏障。标志的更新与数据的写入基本上同时进行，从而在两个操作之间不存在明显延迟，在此期间不会发生对所写入数据的另一更改。
+
+
+
+
+[0093] In some example embodiments, the barrier is atomically updated by adding the number of bytes of data that were written. Utilization of this by software means that in one embodiment, the software knows the number of bytes expected to be written in the buffer in order to synchronize. The receiving thread (also referred to as destination thread) in principle waits on the barrier reaching a certain expected value so that the barrier reaches a "clear" condition. The expected value, for example, in some embodiments, may correspond to the number of bytes or other measure of data that will be written by sending threads (also referred to a source thread).
+
+> 
+[0093] 在一些示例实施例中，通过加上已写入数据的字节数，屏障被原子地更新。软件对此的利用意味着，在一个实施例中，软件知晓预期写入缓冲区的数据字节数，以便进行同步。接收线程（也称为目标线程）原则上等待屏障达到某个预期值，使得屏障进入“清除”状态。例如，在一些实施例中，该预期值可对应于发送线程（也称为源线程）将要写入的数据的字节数或其他度量。
+
+
+
+
+[0094] In one embodiment, a barrier support unit, such as the hardware-implemented synchronization unit described in U.S. Application No. 17/691,296, the entire description of which is incorporated herein by reference, may be used to accelerate the barrier implementations by enabling the receiving thread to simply wait on the barrier "clearing". The hardware-implemented synchronization unit in U.S. Application No. 17/691,296 handles the details of waiting for the count to be reached. However, the receiving thread software does have to know the expected byte count and supply it to the barrier support unit. An example barrier support unit is shown in FIG. 8 of this application.
+
+> 
+[0094] 在一个实施例中，屏障支持单元，例如美国申请号17/691,296中描述的硬件实现的同步单元，其全部描述通过引用并入本文，可用于通过使接收线程仅等待屏障“clearing”来加速屏障实现。美国申请号17/691,296中的硬件实现的同步单元处理等待计数达到的细节。然而，接收线程软件必须知道预期的字节计数并将其提供给屏障支持单元。图8示出了本申请中的一个示例屏障支持单元。
+
+
+
+
+[0095] Since the barrier is managed atomically (all accesses are atomic), some example embodiments allow multiple other threads on the same processor or multiple other processors to cooperate in sending data to one receiving thread. To use this, one embodiment assumes that the software understands to write each element of the data buffer once (possibly from different source threads) and that the receiving thread knows the expected byte count. In one embodiment, the byte count is not required to be static and the sending threads can use this barrier support unit to update the expected byte count before or in parallel with doing this disclosure's special stores with barrier update. Example embodiments (optionally, with the assistance of the barrier support unit) supports dynamically sized data buffers. The result is that data can be written and the barrier updated with no significant delay after the data write.
+
+> 
+[0095] 由于屏障是原子化管理的（所有访问均为原子操作），一些示例实施例允许同一处理器上的多个其他线程或不同处理器上的多个其他线程协同工作，向一个接收线程发送数据。为此，一种实施例假定软件理解只对数据缓冲区的每个元素写入一次（可能来自不同的源线程），且接收线程知晓预期的字节计数。在一个实施例中，字节计数不必是静态的，发送线程可以使用此屏障支持单元在进行本公开所述的带屏障更新的特殊存储之前或与之并行地更新预期的字节计数。示例实施例（可选地在屏障支持单元的辅助下）支持动态大小的数据缓冲区。其结果是，数据可以被写入并由屏障更新，且在数据写入后不会产生明显延迟。
+
+
+
+
+[0096] FIG. 6B shows producer barriers "barrier 0p" and "barrier 1p" that are local to the producer, and consumer barriers "barrier 0c" and "barrier 1c" that are local to the consumer. The producer performs one or more remote combined store and arrive operations, each of which fills a tile with line data and performs a remote arrive operation on the corresponding barrier and calls wait() on the local producer barriers to block until the tile becomes dead (i.e. has no data) again. Each consumer, which was waiting on a consumer barrier until the corresponding tile became live (i.e. have data to consume), would be released in response to the producer's remote arrive operation on the consumer's local barrier and proceeds to load ("LDS") the data from the tile. The consumer issues a remote arrive operation on the producer barrier to indicate the data in the tile was read, and then waits on the local consumer barrier until the tile becomes live again. The producer, upon being released from the wait() in response to the remote arrive operation by the consumer on the producer barrier, proceeds to again fill the tiles by one or more remote combined store and arrive operations.
+
+> 
+[0096] 图6B展示了生产者本地的生产者屏障“barrier 0p”和“barrier 1p”，以及消费者本地的消费者屏障“barrier 0c”和“barrier 1c”。生产者执行一个或多个远程组合存储和到达操作，每个操作将行数据填充至一个瓦片，并对相应屏障执行远程到达操作，同时调用本地生产者屏障上的wait()阻塞，直至该瓦片再次变为死状态（即无数据）。每个在消费者屏障上等待对应瓦片变为活状态（即有待消费数据）的消费者，会响应生产者在消费者本地屏障上的远程到达操作而被释放，并继续从瓦片中加载（“LDS”）数据。消费者在生产屏障上发出远程到达操作，以指示瓦片中的数据已被读取，随后在本地消费者屏障上等待，直至该瓦片再次变为活状态。生产者则响应消费者在生产屏障上的远程到达操作，被从wait()中释放后，继续通过一个或多个远程组合存储和到达操作再次填充这些瓦片。
+
+
+
+
+[0097] Therefore no SM, more specifically neither a producer thread nor a consumer thread, is waiting on a barrier that is not in its own local shared memory. Since a remote wait() is not required, this new technique can utilize a wait() call similar to that used in a previous generation of NVIDIA GPU without modification - that is, the wait() operation for either of the consumer thread or the producer thread is on a local barrier in a memory of its own SM.
+
+> 
+[0097] 因此，没有任何SM，更具体地说，既不是生产者线程也不是消费者线程，在等待不在其自身本地共享内存中的屏障。由于不需要远程wait()，这种新技术可以利用类似于前代NVIDIA GPU中使用的wait()调用，且无需修改——即，消费者线程或生产者线程的wait()操作都在其自身SM内存中的本地屏障上执行。
+
+
+
+
+[0098] Another new aspect in the introduced synchronization is the remote arrive operation from the consumer to the p-barrier (indicating tile has become dead). In some example embodiments, this can be implemented with the same combined store and arrive operation functionality described above (e.g., with a dummy store address). This could be optimized further by adding a remote arrive operation that does not need a store (STS) component. Note that in the multi-producer scenario (e.g., where several producer threads, possibly in different processors, store to the same buffer) described above, a separate combined store and arrive operation is sent to each producer in one embodiment. However, if a multicast scheme (e.g., programmatic multicast described in US 17/691,288) is implemented, then this combined store and arrive can be multicast to those producers.
+
+> 
+[0098] 所引入同步中的另一个新方面是消费者向 p-barrier 发送的远程到达操作（指示瓦片已变为死区）。在一些示例实施例中，这可以通过上文描述的相同的组合存储与到达操作功能来实现（例如，使用一个虚拟存储地址）。通过添加不需要存储（STS）组件的远程到达操作，这一功能可进一步优化。请注意，在上文描述的多生产者场景（例如，多个生产者线程，可能在不同的处理器中，向同一缓冲区存储）中，在一个实施例里，会向每个生产者发送一个单独的组合存储与到达操作。然而，如果实现了多播方案（例如，US 17/691,288 中描述的可编程多播），那么该组合存储与到达操作可以多播给那些生产者。
+
+
+
+
+[0099] FIG. 6C illustrates an example of the synchronization according to an embodiment with two tiles (tiles 0 and 1), each tile having a corresponding p-barrier and a corresponding c-barrier. In the figure, the tile number is illustrated within the representative icon of the tile or barrier. The p-barriers and c-barriers are indicated by diagonal line fill pattern and a dotted fill pattern, respectively.
+
+> 
+[0099] 图6C展示了根据一个实施例的同步示例，其中包含两个瓦片（瓦片0和1），每个瓦片都有一个对应的p-屏障和一个对应的c-屏障。在图中，瓦片编号显示在瓦片或屏障的代表性图标内。p-屏障和c-屏障分别用斜线填充图案和点状填充图案表示。
+
+
+
+
+[0100] At the beginning of time (i.e. beginning of the illustrated synchronization sequence), there may be a (safe) race between loading the program for the producer thread on the producer SM and the consumer thread on the consumer SM. Assuming that the producer wins, time then proceeds as follows (logical time steps 0-4):
+
+> 
+[0100] 在起始时刻（即图示同步序列的开始），生产者SM上的生产者线程程序加载与消费者SM上的消费者线程程序加载之间可能存在（安全的）竞态。假设生产者胜出，时间将按如下逻辑时间步（0-4）推进：
+
+
+
+
+[0101] 0) The producer begins to wait() on the p-barrier for tile 0.
+
+> 
+[0101] 0) 生产者开始在瓦片0的p-barrier上等待wait()。
+
+
+
+
+[0102] 1) The consumer arrives() at the p-barrier for tiles 0 and 1 (since both are initially dead), then waits() on the c-barrier 0 .
+
+> 
+[0102] 1) 消费者到达瓦片0和1的p-屏障（因为两者最初都是死的），然后在c-屏障0上等待()。
+
+
+
+
+[0103] 2) The arrival at p-barrier 0 frees the producer, who fills Tile 0, performing combined STS+Arrive for c-barrier-0 (optionally with multicast to many consumer SMs) and waits() on p-barrier 1.
+
+> 
+[0103] 2) 到达生产者屏障0（p-barrier 0）会释放生产者，生产者填充Tile 0，针对消费者屏障0（c-barrier-0）执行组合的STS+Arrive操作（可选择性地多播到多个消费者SM），并在生产者屏障1（p-barrier 1）上执行wait()。
+
+
+
+
+[0104] 3) The final STS+Arrive frees the consumer from c-barrier 0 , and it begins the consumption of Tile 0, then arrives() on p-barrier-0 and waits() on c-barrier 1.
+
+> 
+[0104] 3) 最终的 STS+Arrive 将消费者从 c-barrier 0 释放，开始消费 Tile 0，然后在 p-barrier-0 上执行 arrives()，并在 c-barrier 1 上等待。
+
+
+
+
+[0105] 3) (Purposely concurrently on the same time step.) The previous arrive() on p-barrier 1 represents that the producer is freed and can fill tile 1.
+
+> 
+[0105] 3) （有意地在同一时间步上并发执行。）对p-barrier 1的上一次arrive()表示生产者被释放，可以填充图块1。
+
+
+
+
+[0106] 4) Steady-state is achieved if the average the roundtrip latency between producer/consumer (or the tile computation time) is greater than the tile size T.
+
+> 
+[0106] 4) 如果生产者/消费者之间的平均往返延迟（或分块计算时间）大于分块大小 T，则达到稳态。
+
+
+
+
+[0107] As noted above, software may, as necessary, dynamically or as configured, trade T off against the number of total resident tiles in order to achieve optimum workload-specific throughput.
+
+> 
+[0107] 如上所述，软件可以根据需要，动态地或按配置，在 T 与总驻留瓦片数量之间进行权衡，以实现最佳的工作负载特定吞吐量。
+
+
+
+
+[0108] FIG. 6D shows another example message flow according to example embodiments, and more clearly illustrates how the data exchange synchronization is achieved with a latency of approximately 0.5 roundtrip time. One roundtrip time here represents the time for a message from the thread (e.g. producer process) on SM0 to reach SM1 (e.g. the shared memory of SM1) and return to SM0. For purposes of this disclosure, the term roundtrip latency also represents the latency for a message from a thread on a SM to reach L2 cache memory and to return too.
+
+> 
+[0108] 图6D示出了根据示例性实施例的另一示例消息流，并更清晰地说明了如何以约0.5个往返时间的延迟实现数据交换同步。此处的一个往返时间表示从SM0上的线程（例如，生产者进程）发出的消息到达SM1（例如，SM1的共享内存）并返回SM0所需的时间。为便于本公开，术语往返延迟也表示一条消息从SM上的某个线程到达二级缓存存储器并返回的延迟。
+
+
+
+
+[0109] This type of fast synchronization achieved with less than a roundtrip latency is, as mentioned above, referred to in this disclosure as "speed of light" or "SOL" synchronization. In some embodiments, SOL synchronization covers the cases of an object (e.g., a set of one or more memory locations) located in a DSMEM (distributed shared memory) location in a particular destination CTA with one or more other CTAs (in the CGA) writing to the object and then in an SOL manner alerting the destination that the object is ready for use (e.g., that writes are completed and visible).
+
+> 
+[0109] 这种以小于往返延迟实现的快速同步，如上所述，在本公开中被称为“光速”或“SOL”同步。在一些实施例中，SOL同步涵盖以下情况：一个对象（例如，一个或多个内存位置的集合）位于特定目标CTA的DSMEM（分布式共享内存）位置中，由（CGA内的）一个或多个其他CTA写入该对象，然后以SOL方式提醒目标该对象已准备好使用（例如，写入已完成且可见）。
+
+
+
+
+[0110] For two concurrently executing threads (or processes) on processor 1 and processor 2, an expected usage of the synchronization of example embodiments may be as follows: processor 1 executes the sequence ST D0, ST D1, REL; and processor 2 executes the sequence ACQ, LD D0, LD D1. The ST D0 and ST D1 operations are combined stored and arrive operations. FIG. 6D depicts the example SOL synchronized data exchange. In the figure, SM0 issues combined store and arrive instructions to store D0 and D1 in the shared memory of SM1. When D0 and D1 are written to SM1 and the barrier on SM1 is updated by the arrive of the combined store and arrive operations, SM1 acquires the barrier (e.g., the wait() on that barrier is released) and loads D0 and D1. The latency incurred is due to the latency of SM0 to SM1 store messages and the latency of the local wait for SM1, thus yielding approximately 0.5 roundtrips of latency. Due to the employment of the combined store and arrive instructions, the sequence of FIG. 6D can be more particularly specified as: processor 1 issues two instructions that are a store D0 and partial release of barrier and store D1 and another partial release of the barrier; and processor 2 performs an acquire on the barrier (wait at partial release), and load D0 and D1.
+
+> 
+[0110] 对于处理器1和处理器2上两个并发执行的线程（或进程），示例实施例同步的预期用法可以如下：处理器1执行序列 ST D0, ST D1, REL；而处理器2执行序列 ACQ, LD D0, LD D1。ST D0 和 ST D1 操作是合并的存储与到达操作。图 6D 描述了示例的 SOL 同步数据交换。在图中，SM0 发出合并的存储与到达指令，将 D0 和 D1 存储到 SM1 的共享内存中。当 D0 和 D1 被写入 SM1 并且 SM1 上的屏障被合并存储与到达操作的到达更新时，SM1 获取该屏障（例如，该屏障上的 wait() 被释放）并加载 D0 和 D1。产生的延迟是由于 SM0 到 SM1 的存储消息延迟和 SM1 本地等待的延迟，因此产生大约 0.5 次往返的延迟。由于采用了合并的存储与到达指令，图 6D 的序列可以更具体地指定为：处理器1发出两条指令，即存储 D0 和屏障的部分释放，以及存储 D1 和屏障的另一个部分释放；处理器2在屏障上执行获取（在部分释放时等待），并加载 D0 和 D1。
+
+
+
+
+[0111] According to example embodiments, the combined store and arrive instructions that store to the same buffer are not required to take the same path from SM0 to SM1. For example, FIG. 7A shows a scenario in which the combined store and arrive instructions between the same pair of SMs take different paths. The different paths may be through the one or more interconnect switches that connect SM0 to SM1. Combined store and arrive instruction A ("stA [BarS]") travels through path 0 in the interconnection switch from the first SM to the shared memory of the second SM, whereas the combined store and arrive instruction B and C ("stB[BarS]" and "stC[BarS]") travel on a different path in the interconnection switch, path 1, to the other SM's shared memory. Each of the store instructions increments the same barrier ("BarS") in accordance with the information regarding the data stored by that instruction. The same destination shared memory is the data destination as well as the synchronization destination. That is the same shared memory includes the receive buffer for the data of the combined arrive operations, and also the barrier updated by the combined arrive operations. Thus, by using the combined store and arrive instructions for performing full or partial updates of the same barrier upon each store, example embodiments avoid imposing any requirements of having to transmit fence flush instructions or any other ordering requirements. [0112] An example transaction barrier structure that includes an arrive count, an expected arrive count, and a transaction count is shown in FIG. 7B. FIG. 7C shows an example instruction format for the combined store and arrive instruction. The instruction format may include at least four fields: the CTA-ID of the target CTA in which the barrier resides, the address of the barrier in the target CTA's shared memory, the CTA-ID of the target CTA in which the data destination is, and the address of the data destination in the target CTA's shared memory shared memory. FIG. 7C also shows example non-limiting sizes for the respective fields: 24 bits each for the barrier address and the data address, and 8 bits each of the barrier CTA-ID and the data CTA-ID. Alternate embodiments may encode multiple target CTA-IDs in a bit-mask for a multicast operation (similar to U.S. Application No. 17/691,288, already incorporated by reference).
+
+> 
+[0111] 根据示例实施例，存储到同一缓冲区的合并型存储并到达指令不必遵循从SM0到SM1的相同路径。例如，图7A展示了一种场景，其中同一对SM之间的合并型存储并到达指令采用了不同的路径。这些不同路径可能通过连接SM0与SM1的一个或多个互连交换器。合并型存储并到达指令A（"stA [BarS]"）通过互连交换器中的路径0从第一SM传输到第二SM的共享内存，而合并型存储并到达指令B和C（"stB[BarS]"与"stC[BarS]"）则经由互连交换器中的另一条路径——路径1传输到另一SM的共享内存。每条存储指令都会根据该指令所存数据的信息递增同一屏障（"BarS"）。同一目标共享内存既是数据目的地也是同步目的地。也就是说，同一共享内存既包含用于合并到达操作数据的接收缓冲区，也包含由合并到达操作更新的屏障。因此，通过使用合并型存储并到达指令在每次存储时对同一屏障执行完整或部分更新，示例实施例避免了必须传输栅栏刷新指令或施加其他排序要求的任何限定。
+[0112] 图7B展示了一个示例事务屏障结构，其中包含到达计数、预期到达计数和事务计数。图7C展示了合并型存储并到达指令的示例指令格式。该指令格式可包含至少四个字段：屏障所在目标CTA的CTA-ID、屏障在目标CTA共享内存中的地址、数据目的地所在目标CTA的CTA-ID以及数据目的地在目标CTA共享内存中的地址。图7C还给出了各字段的示例性非限制性尺寸：屏障地址和数据地址各为24位，屏障CTA-ID和数据CTA-ID各为8位。替代实施例可将多个目标CTA-ID编码在位掩码中以实现多播操作（类似于已通过引用并入的美国专利申请第17/691,288号）。
+
+
+
+
+[0113] Returning to FIG. 7A, it is shown that an arrive operation on the barrier updates (e.g., in this embodiment decrements) the transaction count of the barrier with an expected transaction count of 3 , and each of the combined stored and arrive operations increments the transaction count of the barrier by 1 . Thus, when the transaction barrier reaches 0 the barrier is cleared.
+
+> 
+[0113] 返回图7A，可见屏障上的到达操作会更新（例如，本实施例中为递减）期望事务计数为3的屏障的事务计数，且每次组合的存储与到达操作会将屏障的事务计数递增1。因此，当事务屏障达到0时，屏障便被清除。
+
+
+
+
+[0114] FIG. 7D illustrates an example non-limiting manner in which the instruction format of FIG. 7C can be implemented in a fixed-size packet structure of a processor environment. The example implementation transmits the data address in the target SM shared memory in the first packet and the barrier address in the destination SM shared memory in the second packet. While this implementation requires at least two packets to represent a combined store and arrive instruction, the implementation enables the use of more packets if more data is to be stored.
+
+> 
+图7D展示了一个非限制性示例，说明如何在处理器环境的固定尺寸数据包结构中实现图7C的指令格式。该示例实现在第一个数据包中传输目标SM共享内存中的数据地址，并在第二个数据包中传输目标SM共享内存中的屏障地址。虽然此实现需要至少两个数据包来表示组合的存储与到达指令，但它支持在需要存储更多数据时使用更多数据包。
+
+
+
+
+[0115] FIG. 8 is a schematic block diagram of a hardware-implemented barrier support unit 800 in accordance with some example embodiments. Synchronization unit 800 may be used, in some example embodiment, to accelerate the synchronization operations described above. The barrier support unit 800 is described in U.S. Application No. 17/ 691,296, the entire description of which is incorporated herein by reference. The barrier support unit 800 may accelerate the barrier implementations by enabling the receiving thread to simply wait on the barrier "clearing". The hardware-implemented synchronization unit in the U.S. Application No. 17/691,296 handles the details of waiting for the count to be reached. However, the receiving thread software does have to know the expected byte count and supply it to the barrier support unit.
+
+> 
+[0115] 图8是根据一些示例实施例的硬件实现的屏障支持单元800的示意框图。在一些示例实施例中，同步单元800可用于加速上述同步操作。屏障支持单元800在U.S. Application No. 17/ 691,296中描述，其全部描述以引用方式并入本文。屏障支持单元800可以通过使接收线程简单地等待屏障“清除”来加速屏障实现。U.S. Application No. 17/691,296中的硬件实现的同步单元处理等待计数达到的细节。然而，接收线程软件确实需要知道预期的字节计数并将其提供给屏障支持单元。
+
+
+
+
+## Instruction Set Architecture
+
+[0116] In the embodiments described in relation to FIGS. 6B-6D, if a buffer is claimed to be filled, loads to that buffer should be simply allowed to block waiting until the fill occurs. Being able to clearly define the buffer or location filled event is helpful. In one embodiment, this involves advance setting up of expectation on how many updates are to be expected before the data is considered ready to use. To efficiently support physically distributed buffers (e.g., including those in shared memory or in L2 cache / framebuffer), the expectation is decomposable to localize the tracking effort of buffer fill.
+
+> 
+[0116] 在关于图6B-6D描述的实施例中，如果声称某个缓冲区已被填充，那么对该缓冲区的加载应当简单地允许阻塞，直到填充完成。能够清晰地定义缓冲区或位置被填充的事件非常有帮助。在一个实施例中，这涉及预先设置关于在数据被认为可以使用之前预期会有多少次更新的期望。为了高效支持物理上分布式的缓冲区（例如，包括位于共享内存或L2缓存/帧缓冲区中的缓冲区），该期望是可分解的，以便将缓冲填充的跟踪工作本地化。
+
+
+
+
+[0117] Two new instructions are implemented to support the above described SOL synchronization in some example embodiments: a "Store with Synch" instruction and a "Reduction with Synch" instruction.
+
+> 
+[0117] 在一些示例实施例中，实现了两条新指令以支持上述 SOL 同步：“Store with Synch”指令和“Reduction with Synch”指令。
+
+
+
+
+[0118] The Store with Synch instruction and the Reduction with Synch instruction may be exposed to the programmer through a library interface. In some embodiments, the store may be regarded as invalid unless addressed to shared memory located in another SM belonging to a CTA that is part of the same CGA as the source CTA. The instructions may support one or more operand sizes, such as, for example, 32 bytes, 64 bytes, 128 bytes, etc. A barrier address and a data address are provided as input address parameters. Specifically, the barrier address is represented by CTA_ID in CGA of barrier (which in some embodiments must be the same as the CTA_ID in CGA of the data) and the shared memory offset (address) of the barrier at the target. The data address is represented by CTA_ID in CGA of the data location and the shared memory offset (address) of the data at the target.
+
+> 
+[0118] Store with Synch 指令和 Reduction with Synch 指令可以通过库接口暴露给程序员。在一些实施例中，该存储可能被视为无效，除非其寻址到位于另一个 SM 中的共享内存，该 SM 属于与源 CTA 同一 CGA 中的一个 CTA。这些指令可能支持一种或多种操作数大小，例如 32 字节、64 字节、128 字节等。屏障地址和数据地址作为输入地址参数提供。具体地，屏障地址由屏障所在 CGA 中的 CTA_ID（在一些实施例中必须与数据所在 CGA 中的 CTA_ID 相同）以及目标处屏障的共享内存偏移（地址）表示。数据地址由数据位置所在 CGA 中的 CTA_ID 以及目标处数据的共享内存偏移（地址）表示。
+
+
+
+
+[0119] The Store with Sync instruction provides a SOL CGA memory data exchange using a synchronization that travels with a store. The instruction may be of the form:
+
+> 
+[0119] Store with Sync指令提供了一种利用与存储操作同步进行的同步机制的SOL CGA内存数据交换。该指令的形式可能为：
+
+
+
+
+[0120] ST_CGA_Sync Ra, Rb
+
+> 
+[0120] ST_CGA_Sync Ra, Rb
+
+
+
+
+[0121] Ra: target addresses, contains
+
+> 
+[0121] Ra：目标地址，包含
+
+
+
+
+[0122] CTAID(s) of target CTA(s) - multicast by specifying multiple CTA IDs.
+
+> 
+[0122] 目标CTA(s)的CTAID(s) - 通过指定多个CTA ID进行组播。
+
+
+
+
+[0123] DataAddr: shared memory (SMEM) offset in CTA to perform store to.
+
+> 
+[0123] DataAddr：CTA内用于执行存储操作的共享内存（SMEM）偏移量。
+
+
+
+
+[0124] BarAddr: shared memory offset in CTA to perform barrier update to.
+
+> 
+[0124] BarAddr：CTA 中用于执行屏障更新的共享内存偏移量。
+
+
+
+
+[0125] Rb: data to store.
+
+> 
+[0125] Rb: 待存储数据。
+
+
+
+
+[0126] This instruction stores data to target/destination CTA(s) SMEM[DataAddr]. After data store is guaranteed visible, it decrements the transaction count field of barrier at target CTA(s) SMEM[BarAddr] by the amount of data (e.g., number of bytes) being stored.
+
+> 
+[0126] 该指令将数据存储到目标/目的地的 CTA 的 SMEM[DataAddr]。在数据存储被保证可见后，它将位于目标 CTA 的 SMEM[BarAddr] 处的屏障的事务计数字段减去所存储数据的量（例如，字节数）。
+
+
+
+
+[0127] The Reduction with Synch instruction does shared memory atomic reductions instead of stores. The instruction may have a format such as:
+
+> 
+[0127] Reduction with Synch 指令执行的是共享内存原子归约，而非存储操作。该指令可能具有如下格式：
+
+
+
+
+[0128] REDS CGA.ARRIVE TCNT URa, URb
+
+> 
+[0128] REDS CGA.ARRIVE TCNT URa, URb
+
+
+
+
+[0129] Where URa: target addresses, contains,
+
+> 
+[0129] 其中 URa：目标地址，包含，
+
+
+
+
+[0130] CTAID(s) of target CTA(s) - multicast by specifying multiple CTA IDs.
+
+> 
+[0130] 目标CTA(s)的CTAID(s) - 通过指定多个CTA ID进行组播
+
+
+
+
+[0131] BarAddr: SMEM offset in CTA to perform barrier update to.
+
+> 
+[0131] BarAddr：CTA 内执行屏障更新时的 SMEM 偏移量。
+
+
+
+
+[0132] URb: expected transaction count (e.g. in bytes). [0133] The reduction instruction performs an arrive reduction operation for the number of threads executing the REDS. The arrive reduction operation may be the same as for arrive atomic. The instruction may increment the transaction count in the destination barrier by the number specified in URb. The reduce instruction noted above may be used in some embodiments to sum up all the counts for all the individual threads and store it into URb.
+
+> 
+[0132] URb：预期事务计数（例如，以字节为单位）。[0133] 归约指令对执行 REDS 的线程数量执行到达归约操作。到达归约操作可能与到达原子操作相同。该指令可按 URb 中指定的数量递增目标屏障中的事务计数。上述归约指令在某些实施例中可用于将所有各个线程的计数求和，并将其存储到 URb 中。
+
+
+
+
+[0134] In some embodiments, the instruction format may also be built to track the number of stored bytes explicitly. In this scheme, the Store-with-synch instruction also maintain a running count of number of bytes as below.
+
+> 
+[0134] 在一些实施例中，指令格式还可以被构建为显式地跟踪存储的字节数。在此方案中，Store-with-synch 指令还如下保持字节数的运行计数。
+
+
+
+
+[0135] ST_CGA_Sync [Addrs], Data, TCount
+
+> 
+[0135] ST_CGA_Sync [Addrs], Data, TCount
+
+
+
+
+[0136] where Addrs: target addresses, contains
+
+> 
+[0136] 其中 Addrs：目标地址，包含
+
+
+
+
+[0137] CTAID(s) of target CTA(s) - multicast by specifying multiple CTA IDs.
+
+> 
+[0137] 目标CTA的CTAID(s) - 通过指定多个CTA ID进行组播。
+
+
+
+
+[0138] DataAddr: SMEM offset in CTA to perform store to.
+
+> 
+[0138] DataAddr：CTA 内用于执行存储操作的 SMEM 偏移量。
+
+
+
+
+[0139] BarAddr: SMEM offset in CTA to perform barrier update to.
+
+> 
+[0139] BarAddr：CTA 中用于执行屏障更新的 SMEM 偏移量。
+
+
+
+
+[0140] Data: data to store.
+
+> 
+[0140] 数据：要存储的数据。
+
+
+
+
+[0141] TCount: The running byte transaction count.
+
+> 
+[0141] TCount：运行中的字节事务计数。
+
+
+
+
+[0142] The operation of the instruction may be as follows: [0143] Stores the data to target CTA(s) SMEM [DataAddr].
+
+> 
+[0142] 该指令的操作可以如下：[0143] 将数据存储到目标CTA(s)的SMEM [DataAddr]。
+
+
+
+
+[0144] After data store is guaranteed visible, decrements by number of bytes being stored to ByteTransac-tionCnt (number of bytes written) field of barrier at target CTA(s) SMEM[BarAddr].
+
+> 
+[0144] 在数据存储保证可见后，将目标 CTA(s) 的屏障的 ByteTransactionCnt（写入的字节数）字段 SMEM[BarAddr] 递减存储的字节数。
+
+
+
+
+[0145] Increment the TCount by the number of bytes being stored.
+
+> 
+[0145] 将 TCount 增加正在存储的字节数。
+
+
+
+
+[0146] The corresponding Reduction-with-Synch instruction may be as below:
+
+> 
+[0146] 对应的 Reduction-with-Synch 指令可能如下所示：
+
+
+
+
+[0147] RED CGA_Arrive [BarAddr], TCount
+
+> 
+[0147] RED CGA_Arrive [BarAddr], TCount
+
+
+
+
+[0148] Where BarAddr: Target barrier address, which contains:
+
+> 
+[0148] 其中，BarAddr：目标障碍地址，其包含：
+
+
+
+
+[0149] CTAID(s): Target CTA(s). Multicast by specifying multiple CTA.
+
+> 
+[0149] CTAID(s)：目标CTA(s)。通过指定多个CTA进行多播。
+
+
+
+
+[0150] IDsBarAddr: SMEM offset in CTA to perform barrier update to.
+
+> 
+[0150] IDsBarAddr：CTA中用于执行屏障更新的SMEM偏移量。
+
+
+
+
+[0151] TCount: The byte transaction count of the thread.
+
+> 
+[0151] TCount：线程的字节事务计数。
+
+
+
+
+[0152] This instruction performs an arrive reduction to barrier in CTA(s) SMEM[BarAddr]. The instruction reduces the TCount across all the threads, and then increments the ByteTransactionCnt field of barrier at target CTA(s) SMEM [BarAddr] by the total TCount.
+
+> 
+[0152] 该指令在 CTA(s) 的 SMEM[BarAddr] 中的屏障上执行到达归约。该指令在所有线程间归约 TCount，然后以总 TCount 增加目标 CTA(s) 的 SMEM [BarAddr] 处屏障的 ByteTransactionCnt 字段。
+
+
+
+
+## Other Implementations
+
+[0153] In another embodiment, there is also a barrier located in the same (processor affiliated) memory unit as the destination data buffer, in a manner similar to an above described embodiment. However, instead of updating the barrier with the number of bytes written (or updating the barrier with some other measure of the amount of data written to the data buffer) as in the above described embodiment, in this other embodiment, sending processor(s) write as much data as desired (and/or allowed) to the destination thread's memory (NUMA associated with the destination thread), and then send a memory write fence operation. To help clarify, it helps to realize that the memory system network (e.g., NOC, network on chip) will typically have multiple paths between any two processors in a multiprocessor and a subset of these paths can be used for transmitting write operations from a source thread on a source processor to a destination thread on a destination processor. The total number of possible paths may be implementation dependent, but may be known at startup time and may remain fixed after startup. In this alternative embodiment, the sending processor replicates the fence to be sent on all paths (the fence is sent after the write on the same network paths that write could have taken, but the fence is replicated to all paths on which writes might have travelled). Each arriving fence increments the barrier at the destination one time. The destination thread waits on the known count (expected number of fence arrivals) that is the known number of possible paths from the source processor to the destination processor. When all the fence messages for the store operation by the source SM have arrived at the barrier, the counter in the barrier indicates that all the expected fence messages have been received and therefore all stores have already been received at the destination processor. When the barrier clears, the consumer process, which may be waiting at the barrier, begins to load the data received data.
+
+> 
+[0153] 在另一实施例中，与上述某一实施例类似，也在与目标数据缓冲区相同的（与处理器关联的）存储单元中设置一个屏障。不过，不同于前述实施例中通过更新屏障来记录已写入的字节数（或采用其他度量来更新屏障），在该另一实施例中，发送处理器会向目标线程的存储器（与目标线程相关的 NUMA）写入任意数量（和/或被允许写入）的数据，然后发送一个存储器写围栏操作。为便于理解，可注意到存储器系统网络（例如片上网络 NOC）在多处理器中的任意两个处理器之间通常存在多条路径，这些路径中的一个子集可用于将写操作从源处理器上的源线程传送到目标处理器上的目标线程。可能的路径总数取决于具体实现，但可在启动时获知，并在启动后保持固定。在此替代实施例中，发送处理器会将围栏复制到所有路径上发送（该围栏是在写操作之后，沿着写操作可能经过的相同网络路径发出，但围栏会被复制到写操作可能经过的所有路径上）。每到达一个围栏，就会将目标处的屏障递增一次。目标线程则等待已知的计数（预期的围栏到达数量），该计数即为从源处理器到目标处理器的已知可能路径数。当来自源 SM 的存储操作所对应的所有围栏消息都已到达屏障时，屏障中的计数器即表示所有预期的围栏消息均已收到，因此所有存储操作也已在目标处理器被接收。当屏障解除时，可能正在屏障处等待的消费者进程便开始加载所接收到的数据。
+
+
+
+
+[0154] In a particular implementation, after initial runtime configuration, the number of paths between any two processors is considered to be a static unchanging number. An advantage of this other embodiment in comparison to the embodiment in which the barrier is updated with each store operation, is that the communicating threads are not required to know and communicate the number of bytes written beforehand. Thus, this embodiments may be useful for the many applications for which it is difficult for software to determine the number of bytes to be written. For example, if a subroutine is called to do some of the data writes, it may be difficult for the calling code to know how many bytes the subroutine writes. This alternative implementation avoids that problem of the destination having to know the amount of data it is expecting.
+
+> 
+[0154] 在一种特定实现中，在初始运行时配置之后，任意两个处理器之间的路径数量被视为静态不变的数字。与每次存储操作都更新屏障的实施例相比，该另一实施例的一个优点是通信线程不需要预先知道并传送要写入的字节数。因此，该实施例对于许多软件难以确定要写入的字节数的应用可能是有用的。例如，如果调用子程序来执行一些数据写入，调用代码可能难以知道该子程序写入了多少字节。这种替代实现避免了目的地必须知道其预期数据量的问题。
+
+
+
+
+[0155] This alternative embodiment yields lower latency than the conventional synchronization scheme described in relation to FIG. 5A, that of writing data and then doing a generic write fence that is generally expensive, then writing a flag. The latency for this alternative embodiment would be higher than 0.5 roundtrip time due to the fence operations, but is expected to be less than a roundtrip time and since the fence operation can immediately follow the store operation and no separate flag update operation is required to be sent from the source processor. That is, the elapsed time between the data being written in response to the first message being received and the barrier being updated in response to receiving the fences is less than the one-way time from the source thread to the destination (e.g., less than the elapsed time between the source thread sending first message and the first message being received at the destination thread or destination processor).
+
+> 
+[0155] 该替代实施例相比结合图5A描述的常规同步方案实现了更低延迟，后者需先写入数据，再执行通常开销较大的通用写屏障，最后写入标志。此替代实施例的延迟由于屏障操作会高于0.5个往返时间，但预计将低于一个往返时间，且屏障操作可紧接存储操作之后执行，无需从源处理器发送单独的标志更新操作。也就是说，从响应接收第一条消息写入数据到响应接收屏障更新屏障之间的耗时，小于从源线程到目标端的单向时间（例如，小于源线程发送第一条消息与目标线程或目标处理器收到该消息之间的耗时）。
+
+
+
+
+[0156] In CGA environments, an example embodiment provides for CGA memory object-scoped SOL synchronization of SM2SM communication in the context of CGA memory. This relates to inter-SM stores to CGA shared memory hosted within SMs in their respective shared memory storage. The feature may be utilized between multiple SMs on the same GPC, or on multiple GPCs. In some embodiments, the inter-SM stores may utilize L2-hosted CGA shared memory.
+
+> 
+[0156] 在 CGA 环境中，一个示例实施例提供了在 CGA 内存上下文中用于 SM2SM 通信的 CGA 内存对象作用域 SOL 同步。这涉及对托管在 SM 各自共享内存存储中的 CGA 共享内存的 SM 间存储。该特性可在同一 GPC 上的多个 SM 之间使用，或在多个 GPC 上使用。在一些实施例中，SM 间存储可利用 L2 托管的 CGA 共享内存。
+
+
+
+
+[0157] A key architecture aspect and hardware support for this embodiment is a fence operation that is directed at one other CTA in the CGA running on a different SM (it may also apply for CTAs running on the same SM). The fence instruction specifies a target CTA (which, for example, hardware mapping tables can map to a target SM). It also specifies a barrier address. In some embodiments, the specified barrier address may be located in the CTA's global memory region (e.g., in the partitioned global address space (PGAS) of the CTA). The fence travels on all paths that stores from the source SM to destination SM could travel in the interconnect (crossbar or other switch) interconnecting the SMs. Doing so sweeps all prior stores from the source SM to the destination SM ahead to the destination. That is, the fence cannot arrive at the destination SM on all paths until all stores prior to the fence have arrived at the destination SM. [0158] The fence arrives at the destination SM once per path. Each fence arrival event causes the destination SM to do a fence arrive operation on the barrier in the destination
+
+> 
+[0157] 本实施例的一个关键架构方面及硬件支持是针对 CGA 中运行在不同 SM 上的另一个 CTA 的 fence 操作（对于运行在同一 SM 上的 CTA 也可能适用）。fence 指令指定一个目标 CTA（例如，硬件映射表可将其映射到目标 SM）。它还指定一个屏障地址。在一些实施例中，该屏障地址可能位于 CTA 的全局内存区域中（例如，在 CTA 的分区全局地址空间（PGAS）内）。fence 沿互连 SM 的互连网络（交叉开关或其他交换结构）中所有从源 SM 到目标 SM 的存储操作可能经过的路径传播。这样做会将所有在 fence 之前的存储操作从源 SM 推送至目标 SM。也就是说，在所有 fence 之前的存储操作到达目标 SM 之前，fence 无法通过所有路径到达目标 SM。 [0158] fence 在每个路径上各到达目标 SM 一次。每次 fence 到达事件都会使目标 SM 对目的地中的屏障执行一次 fence 到达操作。
+
+
+
+
+SM. Although a fence arrive may be more complicated than simply an atomic decrement (or increment, depending on implementation) of the barrier location, for purposes of this description one may simply consider it as that.
+
+> 
+SM. 尽管栅栏到达操作可能比简单地原子递减（或递增，取决于实现）屏障位置更复杂，但为了本描述的目的，可以简单地将其视为那样。
+
+
+
+
+[0159] In the simplest use case, the program on the destination SM knows how many fence arrives to expect. The number of paths through the memory system for these inter-SM stores may be a fixed hardware value available to the program. The program could in this case initialize the barrier to N, the number of paths, and then poll the barrier until it is zero. A value of zero would mean the fence had arrived on all paths and on each arrival the fence count of the barrier was decremented.
+
+> 
+[0159] 在最简单的用例中，目标 SM 上的程序知道预期有多少 fence 到达。针对这些 SM 间存储操作，通过内存系统的路径数量可能是一个程序可用的固定硬件值。在这种情况下，程序可以将屏障初始化为路径数量 N，然后轮询屏障直到其变为零。值为零意味着 fence 已在所有路径上到达，并且每次到达时屏障的 fence 计数都会递减。
+
+
+
+
+[0160] A more complicated use case involves multiple sending CTAs being required to, in effect, initialize the barrier prior to the expected fence arrival count. The fence arrivals may be regarded as "transactions". The software layer operates in terms of messages, and sending and receiving CTAs agree on how many messages will arrive. Those messages are "arrivals". With each "arrival" the software, optionally with help from hardware, adjusts the barrier's expected transaction count (i.e., number of paths * number of messages).
+
+> 
+[0160] 一个更复杂的使用场景涉及多个发送 CTA 实际上需要在预期栅栏到达计数之前初始化屏障。栅栏到达可视为“事务”。软件层基于消息运行，发送和接收 CTA 约定将到达的消息数量。这些消息即为“到达”。每次“到达”时，软件（可选在硬件辅助下）调整屏障的预期事务计数（即路径数×消息数）。
+
+
+
+
+[0161] An example programming model for this embodiment may be as described next. The destination CTA has an object barrier in its local memory, which it may initialize before the synchronization operation. The destination CTA communicates "space available" to one or more source CTAs when a designated buffer in the CGA shared memory of the destination CTA becomes available.
+
+> 
+[0161] 此实施例的示例编程模型可如下所述。目标CTA在其本地内存中具有一个对象屏障，并可在同步操作之前对其进行初始化。当目标CTA的CGA共享内存中的指定缓冲区变为可用时，目标CTA向一个或多个源CTA传达“可用空间”。
+
+
+
+
+[0162] The destination CTA executes a wait on the object barrier. One or more source CTA(s) write bulk data to the designated buffer in the destination CTA's CGA shared memory, and then executes a fence and arrive targeting the object barrier in the destination CTA's memory. When the destination CTA is released from the wait on the object barrier, it may then read bulk data from shared memory.
+
+> 
+[0162] 目的地 CTA 在对象屏障上执行等待。一个或多个源 CTA 将批量数据写入目的地 CTA 的 CGA 共享内存中的指定缓冲区，然后执行一个栅栏并针对目的地 CTA 内存中的对象屏障执行到达操作。当目的地 CTA 从对象屏障上的等待中被释放时，其可以随后从共享内存中读取批量数据。
+
+
+
+
+[0163] An example implementation may be as described next. The memory object barrier in the destination CTA local shared memory may be a word with several fields. The fields may include an expected arrive count, actual arrive count, and a fence transaction count. In an example implementation, the arrive counts may be made visible to software, but the fence transaction count may be hardware managed and opaque to software. The fence transaction count, and/or any of the other fields of the memory object barrier can be positive or negative. The barrier can be initialized with a target value for the expected arrive count, and the fence transaction count can be set to 0 .
+
+> 
+[0163] 一种示例性实现可以如下所述。目标 CTA 局部共享内存中的内存对象屏障可以是具有多个字段的一个字。这些字段可包括预期到达计数、实际到达计数和栅栏事务计数。在示例性实现中，到达计数对软件可见，但栅栏事务计数由硬件管理且对软件不透明。栅栏事务计数以及/或者内存对象屏障的任何其他字段均可以为正或为负。该屏障可以用预期到达计数的目标值进行初始化，并且栅栏事务计数可以设置为 0 。
+
+
+
+
+[0164] The fence and arrive instruction may be executed by the source CTA(s) after writing arbitrary bulk data to destination CTA. Alternatively, in some embodiments, the fence and the arrive can be split to two instructions. The source CTA(s) can each send its fences down all N possible address paths to destination SM (e.g. N=4 paths). Each fence includes the address of the memory object barrier. The arrive may be sent down any path to the destination SM, whereas the arrive may be unordered with respect to the fence transactions.
+
+> 
+[0164] 源 CTA（们）可以在向目标 CTA 写入任意批量数据后执行 fence 与 arrive 指令。或者，在一些实施例中，fence 和 arrive 可以被拆分为两条指令。源 CTA（们）可以各自将其 fence 事务发送到目标 SM 的所有 N 条可能的地址路径（例如 N=4 条路径）。每个 fence 事务包含内存对象屏障的地址。arrive 事务可以通过任意路径发送到目标 SM，而 arrive 事务相对于 fence 事务可以是不按序的。
+
+
+
+
+[0165] Fence instructions follow and flush previous memory instructions, if any, on each path from the source SM to destination SM. At the \\destination SM each fence instruction increments the transaction count in the memory object barrier. Also, at the destination, arrives increments the arrive count in the memory object barrier. Further at the destination, the arrives decrements the fence transaction count in the memory object barrier by N. Fence and arrives do not need to be ordered with respect to each other in the case of multiple source CTAs synchronizing on one destination CTA's memory object barrier.
+
+> 
+[0165] Fence 指令会跟随并清空之前的存储器指令（若有），在从源 SM 到目标 SM 的每条路径上。在 \\destination SM 处，每个 fence 指令会递增内存对象屏障中的事务计数。同样，在目标处，arrives 会递增内存对象屏障中的到达计数。进一步地，在目标处，arrives 会将内存对象屏障中的 fence 事务计数递减 N。在多个源 CTA 与一个目标 CTA 的内存对象屏障同步的情况下，fence 和 arrives 不需要彼此排序。
+
+
+
+
+[0166] A barrier wait instruction executed at the \\destination SM may take the barrier address as a parameter and may return "clear" status when (arrive count == expected arrive count) && (fence transaction count == 0). Note, that the fence transaction count is incremented by fence instructions and decremented by arrives, and the destination CTA may wait until it resolves to 0 . Note also the assumption that $\mathrm{N}$ is statically known in hardware (e.g. 4). If $\mathrm{N}$ is not known, the arrive may carry the N.
+
+> 
+[0166] 在目标 SM 上执行的屏障等待指令可以将屏障地址作为参数，并在 (arrive count == expected arrive count) && (fence transaction count == 0) 时返回“clear”状态。请注意，fence transaction count 由 fence 指令递增，并由 arrive 操作递减，目标 CTA 可能会等待直到它变为 0。还要注意假设 $\mathrm{N}$ 在硬件中是静态已知的（例如 4）。如果 $\mathrm{N}$ 未知，arrive 操作可能会携带 N。
+
+
+
+
+[0167] FIG. 9A shows an example conceptual view of a fence instruction from the source SM being replicated into four separate fence messages for the same barrier "BarS" and being transmitted from the source SM to the destination SM via all four available paths through an interconnect in an implementation in which the four paths are the only paths on which messages from the source SM can reach the destination SM. As illustrated the corresponding arrive message may have taken any one of the four paths. An example barrier, such as barrier BarS, to which the messages in FIG. 9A are directed, is shown in FIG. 9C with at least the fields of an arrive count, expected arrive count, and fence count.
+
+> 
+图 9A 展示了概念视图的一个示例：源 SM 的栅栏指令被复制为四个独立的栅栏消息，它们都针对同一屏障“**BarS**”，并通过互连结构中全部四条可用路径从源 SM 发送到目的 SM；在该实现中，这四条路径是源 SM 的消息能够到达目的 SM 的唯一路径。如图所示，对应的到达消息可能已取道这四条路径中的任意一条。图 9C 则给出了一个示例屏障（例如图 9A 中消息所指的屏障 BarS），它至少包含到达计数、预期到达计数和栅栏计数字段。
+
+
+
+
+[0168] The fence instructions, because of their replication to all paths between the source and destination, may generate substantial additional traffic on the interconnect. For example, for each fence packet generated by the source thread, the memory system may replicate N fence packets to transmit over each of the $\mathrm{N}$ available paths to the destination SM. In some embodiments the interconnect bandwidth is configured to limit the bandwidth available for the SM2SM traffic such as the fence messages so that the reduction of the interconnect bandwidth available to L2 data and L2-related messaging is minimized. Thus, example embodiments, may restrict SM2SM traffic on the interconnect (e.g. crossbar) to a subset of the links available on the interconnect, and may distribute the SM2SM traffic over the subset so that the reduction of bandwidth available for L2 on the interconnect is controlled. FIG. 9B, for example, illustrates that a subset of four links each carry 25% of the SM2DM traffic.
+
+> 
+[0168] 栅栏指令因其在源与目标之间所有路径上的复制，可能会在互连上产生大量额外流量。例如，对于源线程生成的每个栅栏数据包，内存系统可能会复制 $\mathrm{N}$ 个栅栏数据包，以便通过 $\mathrm{N}$ 条可用路径中的每一条传输至目标SM。在某些实施例中，互连带宽被配置为限制可用于SM2SM流量（如栅栏消息）的带宽，从而将L2数据和L2相关消息可用的互连带宽的减少降至最低。因此，示例实施例可能会将互连（如交叉开关）上的SM2SM流量限制在互连可用链路的一个子集内，并可能将SM2SM流量分配在该子集上，以便控制L2在互连上可用带宽的减少。例如，图9B展示了一个包含四条链路的子集，每条链路承载25%的SM2DM流量。
+
+
+
+
+[0169] FIGS. 9D-9F illustrate three different data exchange models. FIG. 9D illustrates the conventional global memory based data exchange, with synchronization latency of 3 to 4 roundtrips to L2 cache. FIG. 9E illustrates the shared memory based SM2SM data exchange that operates in the GPC-CGA scope (CGA-scope extending to GPC), with synchronization latency about 0.5 roundtrip, according to some embodiments. FIG. 9F shows a L2- mediated SM2SM data exchange model in which synchronization latency is around two L2 roundtrips. It should be noted that the latency for 9F includes the buffer-availability synchronization while FIGS. 9D and 9E do not.
+
+> 
+[0169] 图9D-9F展示了三种不同的数据交换模型。图9D展示了传统的基于全局内存的数据交换，同步延迟为到L2缓存的3至4次往返。根据一些实施例，图9E展示了基于共享内存的SM2SM数据交换，其在GPC-CGA范围内操作（CGA范围扩展至GPC），同步延迟约为0.5次往返。图9F展示了一种L2介导的SM2SM数据交换模型，其中同步延迟大约为两次L2往返。需注意，图9F的延迟包含了缓冲区可用性同步，而图9D和图9E则不包含。
+
+
+
+
+[0170] In the model of FIG. 9D, the communication is more similar to shared memory-based SM2SM data exchange even though the data transfer is routed through L2. The flow may operate as described next.
+
+> 
+[0170] 在图9D的模型中，即使数据传输通过L2进行，通信也更类似于基于共享内存的SM2SM数据交换。该流程接下来可能按如下所述运行。
+
+
+
+
+[0171] An entity in an L2 slice, which may be referred to as an agent and which may be well-known to processors in the system, is defined to mediate the exchange between producer and consumer processes. A respective agent may be defined for each specific type of communication, and may include a queue that coordinates the communication and permits some level of pipelining. Instead of a data queue that a producer thread pushes into, the agent can include a consumer queue upon which the consumer waits for data. Hardware support can provide for such a queue to reside in a single L2 slice.
+
+> 
+[0171] 在 L2 切片中定义了一个实体，可称为代理，系统内的处理器可能熟知该代理，用于调解生产者进程与消费者进程之间的交换。可针对每种特定类型的通信定义相应的代理，并可包含一个队列来协调通信并允许一定程度的流水线操作。代理可以包含一个消费者队列，消费者在该队列上等待数据，而不是采用由生产者线程推入的数据队列。硬件支持可使得这样的队列驻留于单个 L2 切片中。
+
+
+
+
+[0172] The consumer thread sets up a local shared memory buffer as the receiving buffer, a transaction barrier, and a data receiving remap table. The consumer pushes receiving data into the queue. Push fails due to the queue being full, may require retry. When the queue is non-empty, the producer thread can push its data through L2 slices, where the agent operates to reflect the data into the consumer's receive buffer. The data push may target a specific L2 slice and be bounced back to consumer like a load data.
+
+> 
+[0172] 消费者线程设置一个本地共享内存缓冲区作为接收缓冲区、一个事务屏障以及一个数据接收重映射表。消费者将接收数据推入队列。若因队列已满导致推入失败，可能需要重试。当队列非空时，生产者线程可通过L2切片推送其数据，其中代理操作会将数据反射到消费者的接收缓冲区中。数据推送可能指向特定的L2切片，并像加载数据一样反弹回消费者。
+
+
+
+
+[0173] The L2 slice of choice may be determined through a hash or the like aiming to spread out to different slices more evenly. Data packets are tagged with the consumer information posted in the queue, together with buffer internal offset managed by producer. The time chart in FIG. 9G illustrates the events in this exchange model.
+
+> 
+[0173] 所选的L2切片可以通过哈希或类似方法确定，旨在更均匀地分布到不同的切片。数据包被标记上发布到队列中的消费者信息，以及由生产者管理的缓冲区内部偏移量。图9G中的时间图说明了该交换模型中的事件。
+
+
+
+
+[0174] FIG. 9G shows SOL latency for L2-mediated SM2SM data exchange, according to an embodiment. The L2 slice0 includes a hardware-supported queue structure that may, in some embodiments, reside only on a single L2 slice. The producer processor (SM0) first performs a queue PopWait operation with extra wait latency to setup the exchange of data. This operation, between sending and returning of PopWait ("P.Wait"), incurs 1 roundtrip. The consumer processor (SM1) publishes the receiving buffer to L2 slice0 and issues a queue PushBuf ("P.B") operation. If the queue is full, the consumer may retry. Upon the Pop-Wait returning, the producer pushes data through the L2 slices. In the illustrated example, D0 is pushed to L2 slice0 and bounced to the consumer. D1 is pushed to L2 slice1 and bounced to the consumer. From the consumer viewpoint, due to the data being bounced from the respective L2 slices to the consumer's local memory, the data exchange incurs one roundtrip or less.
+
+> 
+[0174] 图9G示出了根据一个实施例的通过L2进行SM2SM数据交换的SOL延迟。L2 slice0包括硬件支持的队列结构，在某些实施例中，该结构可能仅驻留在单个L2切片上。生产者处理器（SM0）首先执行队列PopWait操作，并带有额外的等待延迟以建立数据交换。该操作在发送和返回PopWait（“P.Wait”）之间产生1次往返延迟。消费者处理器（SM1）将接收缓冲区发布到L2 slice0，并发出队列PushBuf（“P.B”）操作。如果队列已满，消费者可能会重试。在Pop-Wait返回时，生产者通过L2切片推送数据。在所示的示例中，D0被推送到L2 slice0并反弹给消费者。D1被推送到L2 slice1并反弹给消费者。从消费者的角度看，由于数据从相应的L2切片反弹到消费者的本地内存，数据交换产生一次往返延迟或更少。
+
+
+
+
+[0175] Comparing the mediated model of FIG. 9F against the conventional global memory-based data exchange of FIG. 9D several characteristics can be observed: the mediated communication is more closely coupled; it does not stage data in global memory buffer, but directly stores into the destination CTA's shared memory; it requires both producer and consumer to exist in the GPU for the communication to happen; and it is in the form of a SOL SM2SM synchronization that may extend beyond the GPC_CGA scope.
+
+> 
+[0175] 将图9F的中介模型与图9D基于传统全局内存的数据交换进行比较，可以观察到以下几个特征：中介通信更加紧密耦合；它不会在全局内存缓冲区中暂存数据，而是直接存储到目标CTA的共享内存中；它要求生产者和消费者都存在于GPU中才能进行通信；并且它采用SOL SM2SM同步的形式，该同步可能扩展到GPC_CGA范围之外。
+
+
+
+
+[0176] The data communication in the embodiment of FIG. 9D may not need to be explicitly fenced. However, in some embodiments it may use any object fence mechanism and semantics.
+
+> 
+[0176] 图9D实施例中的数据通信可能不需要显式地设置内存栅栏。然而，在一些实施例中，它可以使用任意对象栅栏机制和语义。
+
+
+
+
+[0177] When the transaction barrier in the consumer clears, the data updates from the producers to the associated shared memory buffer is guaranteed visible. The minimal latency between consumer push and data arrival is around two L2 roundtrips. The first roundtrip to communicate the "buffer ready information" ("P.B" in FIG. 9F) from consumer. The second roundtrip time is an approximation of the latency from the transmission of the data (e.g., PushData ("P.D") in FIG. 9F) by the producer processor (SM0) to reach L2, then to be bounced in the L2 to the consumer thread (SM1) to communicate the data itself, and subsequently generating an arrive operation to update the barrier at the consumer processor. The PushData operation may have obtained the address of the receive buffer from the buffer information pushed on the queue by the consumer. Although not shown in the figure, in some embodiments, the data may be staged in the shared memory before being used by the consumer process. Staging the data in shared memory provides an opportunity for organizing the incoming data (e.g., data swizzle and minimize data divergence) for more efficient processing by the consumer process.
+
+> 
+[0177] 当消费者端的事务屏障清除时，生产者对相关共享内存缓冲区的数据更新即保证可见。消费者推送与数据到达之间的最小延迟大约为两次 L2 往返。第一次往返用于从消费者传递“缓冲区就绪信息”（图 9F 中的“P.B”）。第二次往返时间大致对应以下延迟：生产者处理器（SM0）发送数据（例如图 9F 中的 PushData（“P.D”））到达 L2，然后在 L2 中反弹至消费者线程（SM1）以传递数据本身，随后生成到达操作以更新消费者处理器处的屏障。PushData 操作可能已从消费者推送到队列上的缓冲区信息中获取了接收缓冲区的地址。尽管图中未展示，在某些实施例中，数据在消费者进程使用之前可能会暂存于共享内存中。将数据暂存于共享内存提供了整理传入数据（例如数据重排和最小化数据发散）的机会，以便消费者进程更高效地处理。
+
+
+
+
+[0178] Hardware support may include hardware-supported mediating queues in L2. Each queue may carry the following information: the block size of the transfer, and the number of blocks and routing information (e.g., consumer SM ID or crossbar node / port ID) in each entry. In an example implementation, a queue may fit on a single L2 slice and may be memory backed. In an example implementation, a single 256B queue can fit on a single slice, can support up to 63 entries with 4B entry size, or 126 entries with 2B entry size. In case a larger queue is desired, special address hash / space and global memory carve out for a backing-store may be used.
+
+> 
+[0178] 硬件支持可包括 L2 中由硬件支持的中介队列。每个队列可携带以下信息：传输的块大小、以及每个条目中的块数量与路由信息（例如，消费者 SM ID 或交叉开关节点/端口 ID）。在一示例性实施方式中，队列可适配于单个 L2 切片，并可由内存支持。在一示例性实施方式中，单个 256B 队列可适配于单个切片，可支持多达 63 个条目（条目大小为 4B）或 126 个条目（条目大小为 2B）。若需要更大的队列，可使用特殊的地址哈希/空间以及为后备存储划分的全局内存。
+
+
+
+
+[0179] The hardware may support atomic queue operations: PushBuf and Popwait. PushBuf can be used to advertise data receiving buffer by pushing into the tail of the queue, return if the push is successful immediately. PopWait can be used to wait if pending block counter indicates not enough buffer to produce, or reserve the pending block counter otherwise. A separated try-wait buffer to hold the waiting producer may also be provided.
+
+> 
+[0179] 硬件可能支持原子队列操作：PushBuf 和 PopWait。PushBuf 可用于通过推入队列尾部来通告数据接收缓冲区，若推入成功则立即返回。PopWait 可用于在待处理块计数器指示没有足够缓冲区可生产时等待，否则保留待处理块计数器。还可能提供一个单独的尝试等待缓冲区来容纳等待的生产者。
+
+
+
+
+[0180] The hardware may further provide split SM2SM support. Consumer-side data receiving buffer setup may include allocating shared memory buffer, initializing transaction barrier, setting up buffer base / size / barrier etc. into a remap table, and performing PushBuf and cancelling the setting up of the buffer on fail. Producer side data pushing may include special store flavor that will bounce to destination SM like a load, special tex2gnic packet type with routing info returned from PopWait, optionally multicast store for queue expansion. Since the barrier is on the consumer side and is not made visible to producer, the consumer may have the responsibility to setup the expected transaction count. Either set the precise number if the size is wellknown between the producer and consumer. When the data packet size can vary, set the maximum number that matches the buffer size, and the producer has the responsibility to close the exchange when the data is actually smaller.
+
+> 
+[0180] 该硬件还可以提供拆分 SM2SM 支持。消费者端的数据接收缓冲区设置可能包括分配共享内存缓冲区、初始化事务屏障、将缓冲区基地址/大小/屏障等信息写入重映射表，并执行 PushBuf，若失败则取消缓冲区设置。生产者端的数据推送可能包括一种特殊存储类型，它会像加载操作一样弹跳到目标 SM；携带从 PopWait 返回的路由信息的特殊 tex2gnic 数据包类型；以及可选的多播存储用于队列扩展。由于屏障位于消费者端，且对生产者不可见，因此消费者有责任设置预期的事务计数。如果生产者和消费者之间明确知晓大小，则可设精确数目。当数据包大小可变时，则设置与缓冲区大小匹配的最大值，而此时若实际数据量较小，由生产者负责关闭该交换。
+
+
+
+
+[0181] FIG. 9H shows a flowchart of SOL latency for L2- mediated SM2SM communication in a compute queue model implementation. In the implementation shown in FIG. 9H, a different resource management model from the model of FIG. 9G is used. Like in the implementation of FIG. 9G, a hardware-supported queue structure that resides in an L2 slice exists. Each producer only sees a temporal local queue in shared memory. The temporal queue covers the latency to coalesce workload and get consumer ready.
+
+> 
+[0181] 图9H示出了计算队列模型实现中L2介导的SM到SM通信的SOL延迟流程图。在图9H所示的实现中，使用了与图9G模型不同的资源管理模型。与图9G的实现类似，存在一个位于L2切片中的硬件支持的队列结构。每个生产者仅在共享内存中看到一个临时本地队列。该临时队列覆盖了合并工作负载并使消费者就绪的延迟。
+
+
+
+
+[0182] The producer, through a persistent agent in global memory, launches the consumer as needed by causing the persistent agent to issue a launch a consumer thread to receive the data that the producer is yet to produce. By providing for the persistent agent to control the startup of the consumer process, the producer retires and releases register file resource for consumer as it dumps data into a local queue. The persistent agent ("CWD Workload Dispatch" in FIG. 9I) handles the local queue for the worker warps. Similarly the same persistent agent for consumer side setup to avoid cold misses on newly launched CTA
+
+> 
+[0182] 生产者通过全局内存中的一个持久代理，按需启动消费者，具体方式是由该持久代理发出启动消费者线程的指令，以接收生产者尚未产生的数据。通过让持久代理控制消费者进程的启动，生产者在将数据转储到本地队列时退役，并释放寄存器文件资源供消费者使用。持久代理（图9I中的“CWD 工作负载派发”）负责处理工作线程束（worker warps）的本地队列。类似地，同一个持久代理也用于消费者端的设置，以避免新启动的 CTA 发生冷缺失。
+
+
+
+
+[0183] A conceptual system diagram for the operations in FIG. 9H is shown in FIG. 9I with the producer being shown on the right and the consumer on the left. Direct memory access (DMA) units of the producer and consumer, controlled by a persistent agent "CWD workload dispatch", moves data from the output queue in the producer's local shared memory via the L2-mediated queue(s) to the input buffers in the local shared memory of the consumer. In the producer, worker threads populate the output queue with data from an input buffer. In the consumer, worker threads move the received data from the input buffers to a shared memory input queue for use by the consumer processes.
+
+> 
+图9I展示了图9H中操作的概念系统图，其中生产者显示在右侧，消费者显示在左侧。生产者和消费者的直接存储器访问（DMA）单元，由持久代理“CWD工作负载调度”控制，将数据从生产者的本地共享内存中的输出队列，经由L2介导的队列，移动到消费者的本地共享内存中的输入缓冲区。在生产者中，工作线程用来自输入缓冲区的数据填充输出队列。在消费者中，工作线程将接收到的数据从输入缓冲区移动到共享内存输入队列，以供消费者进程使用。
+
+
+
+
+## Example GPU Architecture
+
+[0184] An example illustrative architecture in which the fast data synchronization disclosed in this application is incorporated will now be described. The following information is set forth for illustrative purposes and should not be construed as limiting in any manner. Any of the following features may be optionally incorporated with or without the exclusion of other features described.
+
+> 
+[0184] 现在将描述一种示例说明性架构，其中结合了本申请公开的快速数据同步。以下信息仅用于说明目的，不应以任何方式解释为限制性的。任何以下特征均可选择性地并入，无论是否排除所描述的其他特征。
+
+
+
+
+[0185] FIG. 10 illustrates a parallel processing unit (PPU) 1000, in accordance with an embodiment. In an embodiment, the PPU 1000 is a multi-threaded processor that is implemented on one or more integrated circuit devices. The PPU 1000 is a latency hiding architecture designed to process many threads in parallel. A thread (e.g., a thread of execution) is an instantiation of a set of instructions configured to be executed by the PPU 1000. In an embodiment, the PPU 1000 is a graphics processing unit (GPU) configured to implement a graphics rendering pipeline for processing three-dimensional (3D) graphics data in order to generate two-dimensional (2D) image data for display on a display device such as a liquid crystal display (LCD) device. In other embodiments, the PPU 1000 may be utilized for performing general-purpose computations. In some other embodiments, PPU 100 configured to implement large neural networks in deep learning applications or other high performance computing applications.
+
+> 
+[0185] 图10示出了根据一个实施例的并行处理单元(PPU)1000。在一个实施例中，PPU 1000是在一个或多个集成电路器件上实现的多线程处理器。PPU 1000是一种延迟隐藏架构，设计用于并行处理众多线程。线程（例如，执行线程）是配置为由PPU 1000执行的一组指令的实例化。在一个实施例中，PPU 1000是图形处理单元(GPU)，其配置为实现图形渲染管线，用于处理三维(3D)图形数据，以生成二维(2D)图像数据，用于在诸如液晶显示(LCD)设备之类的显示设备上显示。在其他实施例中，PPU 1000可用于执行通用计算。在一些其他实施例中，PPU 100配置为实现深度学习应用或其他高性能计算应用中的大型神经网络。
+
+
+
+
+[0186] One or more PPUs 1000 may be configured to accelerate thousands of High Performance Computing (HPC), data center, and machine learning applications. The PPU 1000 may be configured to accelerate numerous deep learning systems and applications including autonomous vehicle platforms, deep learning, high-accuracy speech, image, and text recognition systems, intelligent video analytics, molecular simulations, drug discovery, disease diagnosis, weather forecasting, big data analytics, astronomy, molecular dynamics simulation, financial modeling, robotics, factory automation, real-time language translation, online search optimizations, and personalized user recommendations, and the like.
+
+> 
+[0186] 一个或多个PPU 1000可被配置为加速数千种高性能计算(HPC)、数据中心和机器学习应用。PPU 1000可被配置为加速众多深度学习系统和应用，包括自动驾驶汽车平台、深度学习、高精度语音、图像及文本识别系统、智能视频分析、分子模拟、药物发现、疾病诊断、天气预报、大数据分析、天文学、分子动力学模拟、金融建模、机器人技术、工厂自动化、实时语言翻译、在线搜索优化和个性化用户推荐等。
+
+
+
+
+[0187] As shown in FIG. 10, the PPU 1000 includes an Input/Output (I/O) unit 1005, a front end unit 1015, a scheduler unit 1020, a work distribution unit 1025, a hub 1030, a crossbar (Xbar) 1070, one or more general processing clusters (GPCs) 1050, and one or more partition units 1080. An LRC 1080, such as, for example, described above in relation to FIGS. 2 and 2A, may be located between crossbar 1070 and the MPU 1080, and may be configured to support the multicast described above. The PPU 1000 may be connected to a host processor or other PPUs 1000 via one or more high-speed NVLink 1010 interconnect. The PPU 1000 may be connected to a host processor or other peripheral devices via an interconnect 1002. The PPU 1000 may also be connected to a memory comprising a number of memory devices 1004. In an embodiment, the memory 1004 may comprise a number of dynamic random access memory (DRAM) devices. The DRAM devices may be configured as a high-bandwidth memory (HBM) subsystem, with multiple DRAM dies stacked within each device.
+
+> 
+[0187] 如图10所示，PPU 1000包括输入/输出(I/O)单元1005、前端单元1015、调度器单元1020、工作分配单元1025、集线器1030、交叉开关(Xbar)1070、一个或多个通用处理集群(GPC)1050，以及一个或多个分区单元1080。例如上文结合图2和图2A描述的LRC 1080可位于交叉开关1070与MPU 1080之间，并可被配置为支持前文所述的多播。PPU 1000可经由一个或多个高速NVLink 1010互连连接到主机处理器或其他PPU 1000。PPU 1000可经由互连1002连接到主机处理器或其他外围设备。PPU 1000还可连接到包含多个存储器设备1004的存储器。在一个实施例中，存储器1004可包括多个动态随机存取存储器(DRAM)设备。这些DRAM设备可被配置为一个高带宽存储器(HBM)子系统，每个设备内堆叠有多个DRAM裸片。
+
+
+
+
+[0188] The NVLink 1010 interconnect enables systems to scale and include one or more PPUs 1000 combined with one or more CPUs, supports cache coherence between the PPUs 1000 and CPUs, and CPU mastering. Data and/or commands may be transmitted by the NVLink 1010 through the hub 1030 to/from other units of the PPU 1000 such as one or more copy engines, a video encoder, a video decoder, a power management unit, etc. (not explicitly shown). The NVLink 1010 is described in more detail in conjunction with FIG. 13A and FIG. 13B.
+
+> 
+[0188] NVLink 1010 互连使系统能够扩展并包含一个或多个 PPU 1000 与一个或多个 CPU 的组合，支持 PPU 1000 与 CPU 之间的缓存一致性，以及 CPU 主控。数据和/或命令可通过 NVLink 1010 经集线器 1030 传输至 PPU 1000 的其他单元，例如一个或多个复制引擎、视频编码器、视频解码器、电源管理单元等（未明确示出），或从这些单元传出。NVLink 1010 的更多细节将结合图 13A 和图 13B 进行描述。
+
+
+
+
+[0189] The I/O unit 1005 is configured to transmit and receive communications (e.g., commands, data, etc.) from a host processor (not shown) over the interconnect 1002. The I/O unit 1005 may communicate with the host processor directly via the interconnect 1002 or through one or more intermediate devices such as a memory bridge. In an embodiment, the I/O unit 1005 may communicate with one or more other processors, such as one or more of the PPUs 1000 via the interconnect 1002. In an embodiment, the I/O unit 1005 implements a Peripheral Component Interconnect Express (PCIe) interface for communications over a PCIe bus and the interconnect 1002 is a PCIe bus. In alternative embodiments, the I/O unit 1005 may implement other types of well-known interfaces for communicating with external devices.
+
+> 
+[0189] I/O单元1005经配置通过互连1002从主机处理器（未示出）发送和接收通信（例如，命令、数据等）。I/O单元1005可直接经由互连1002或通过一个或多个中间设备（如内存桥）与主机处理器通信。在一个实施例中，I/O单元1005可经由互连1002与一个或多个其他处理器通信，例如一个或多个PPU 1000。在一个实施例中，I/O单元1005实现外设组件互连Express (PCIe)接口，以便通过PCIe总线进行通信，且互连1002为PCIe总线。在替代实施例中，I/O单元1005可实现其他类型的公知接口以与外部设备通信。
+
+
+
+
+[0190] The I/O unit 1005 decodes packets received via the interconnect 1002. In an embodiment, the packets represent commands configured to cause the PPU 1000 to perform various operations. The I/O unit 1005 transmits the decoded commands to various other units of the PPU 1000 as the commands may specify. For example, some commands may be transmitted to the front end unit 1015. Other commands may be transmitted to the hub 1030 or other units of the PPU 1000 such as one or more copy engines, a video encoder, a video decoder, a power management unit, etc. (not explicitly shown). In other words, the I/O unit 1005 is configured to route communications between and among the various logical units of the PPU 1000.
+
+> 
+[0190] I/O单元1005对通过互连1002接收的数据包进行解码。在一个实施例中，这些数据包代表配置为使PPU 1000执行各种操作的命令。I/O单元1005根据命令的指示，将解码后的命令传输到PPU 1000的各个其他单元。例如，某些命令可能被传输到前端单元1015。其他命令可能被传输到集线器1030或PPU 1000的其他单元，例如一个或多个复制引擎、视频编码器、视频解码器、电源管理单元等（未明确示出）。换言之，I/O单元1005被配置为在PPU 1000各个逻辑单元之间路由通信。
+
+
+
+
+[0191] In an embodiment, a program executed by the host processor encodes a command stream in a buffer that provides workloads to the PPU 1000 for processing. A workload may comprise several instructions and data to be processed by those instructions. The buffer is a region in a memory that is accessible (e.g., read/write) by both the host processor and the PPU 1000. For example, the I/O unit 1005 may be configured to access the buffer in a system memory connected to the interconnect 1002 via memory requests transmitted over the interconnect 1002. In an embodiment, the host processor writes the command stream to the buffer and then transmits a pointer to the start of the command stream to the PPU 1000. The front end unit 1015 receives pointers to one or more command streams. The front end unit 1015 manages the one or more streams, reading commands from the streams and forwarding commands to the various units of the PPU 1000.
+
+> 
+[0191] 在一个实施例中，由主机处理器执行的程序将命令流编码到缓冲区中，该缓冲区为PPU 1000提供待处理的工作负载。工作负载可包含若干指令及这些指令待处理的数据。缓冲区是存储器中的一个区域，可由主机处理器和PPU 1000两者访问（例如读/写）。例如，I/O单元1005可被配置为通过经由互连结构1002传输的存储器请求，访问连接到互连结构1002的系统存储器中的缓冲区。在一个实施例中，主机处理器将命令流写入缓冲区，然后将指向命令流起始位置的指针传输给PPU 1000。前端单元1015接收指向一个或多个命令流的指针。前端单元1015管理所述一个或多个流，从这些流中读取命令并将命令转发给PPU 1000的各个单元。
+
+
+
+
+[0192] The front end unit 1015 is coupled to a scheduler unit 1020 that configures the various GPCs 1050 to process tasks defined by the one or more streams. The scheduler unit 1020 is configured to track state information related to the various tasks managed by the scheduler unit 1020. The state may indicate which GPC 1050 a task is assigned to, whether the task is active or inactive, a priority level associated with the task, and so forth. The scheduler unit 1020 manages the execution of a plurality of tasks on the one or more GPCs 1050.
+
+> 
+[0192] 前端单元1015耦合到调度器单元1020，调度器单元1020配置各个GPC 1050以处理由一个或多个流定义的任务。调度器单元1020被配置为跟踪与调度器单元1020管理的各种任务相关的状态信息。该状态可指示任务被分配到哪个GPC 1050、任务是活跃还是非活跃、与任务相关联的优先级等等。调度器单元1020管理在一个或多个GPC 1050上执行的多个任务。
+
+
+
+
+[0193] The scheduler unit 1020 is coupled to a work distribution unit 1025 that is configured to dispatch tasks for execution on the GPCs 1050. The work distribution unit 1025 may track a number of scheduled tasks received from the scheduler unit 1020. In an embodiment, the work distribution unit 1025 manages a pending task pool and an active task pool for each of the GPCs 1050. The pending task pool may comprise a number of slots (e.g., 32 slots) that contain tasks assigned to be processed by a particular GPC 1050. The active task pool may comprise a number of slots (e.g., 4 slots) for tasks that are actively being processed by the GPCs 1050. As a GPC 1050 finishes the execution of a task, that task is evicted from the active task pool for the GPC 1050 and one of the other tasks from the pending task pool is selected and scheduled for execution on the GPC 1050. If an active task has been idle on the GPC 1050, such as while waiting for a data dependency to be resolved, then the active task may be evicted from the GPC 1050 and returned to the pending task pool while another task in the pending task pool is selected and scheduled for execution on the GPC 1050.
+
+> 
+[0193] 调度器单元1020耦合到工作分配单元1025，该工作分配单元1025被配置为分派任务以在GPC 1050上执行。工作分配单元1025可跟踪从调度器单元1020接收到的已调度任务的数量。在一个实施例中，工作分配单元1025为每个GPC 1050管理一个待处理任务池和一个活动任务池。待处理任务池可包含多个槽位（例如，32个槽位），这些槽位容纳分配给特定GPC 1050处理的任务。活动任务池可包含多个槽位（例如，4个槽位），用于正由GPC 1050主动处理的任务。当某个GPC 1050完成某个任务的执行时，该任务会从该GPC 1050的活动任务池中逐出，并从待处理任务池中选择另一个任务调度到该GPC 1050上执行。若某个活动任务在GPC 1050上处于空闲状态，比如正在等待某个数据依赖关系被解决，则该活动任务可被从GPC 1050中逐出并返回待处理任务池，同时从待处理任务池中选择另一个任务调度到该GPC 1050上执行。
+
+
+
+
+[0194] The work distribution unit 1025 communicates with the one or more GPCs 1050 via XBar 1070. The XBar 1070 is an interconnect network that couples many of the units of the PPU 1000 to other units of the PPU 1000. For example, the XBar 1070 may be configured to couple the work distribution unit 1025 to a particular GPC 1050. Although not shown explicitly, one or more other units of the PPU 1000 may also be connected to the XBar 1070 via the hub 1030.
+
+> 
+[0194] 工作分配单元1025通过XBar 1070与一个或多个GPC 1050通信。XBar 1070是一个互连网络，将PPU 1000的许多单元耦合到PPU 1000的其他单元。例如，XBar 1070可被配置为将工作分配单元1025耦合到特定的GPC 1050。尽管未明确示出，PPU 1000的一个或多个其他单元也可通过集线器1030连接到XBar 1070。
+
+
+
+
+[0195] The tasks are managed by the scheduler unit 1020 and dispatched to a GPC 1050 by the work distribution unit 1025. The GPC 1050 is configured to process the task and generate results. The results may be consumed by other tasks within the GPC 1050, routed to a different GPC 1050 via the XBar 1070, or stored in the memory 1004. The results can be written to the memory 1004 via the partition units 1080, which implement a memory interface for reading and writing data to/from the memory 1004. The results can be transmitted to another PPU 1004 or CPU via the NVLink 1010. In an embodiment, the PPU 1000 includes a number U of partition units 1080 that is equal to the number of separate and distinct memory devices 1004 coupled to the PPU 1000. A partition unit 1080 will be described in more detail below in conjunction with FIG. 11B.
+
+> 
+[0195] 任务由调度器单元1020管理，并由工作分发单元1025派发至GPC 1050。GPC 1050被配置为处理任务并生成结果。结果可由GPC 1050内的其他任务使用，经由XBar 1070路由至不同的GPC 1050，或存储在存储器1004中。结果可通过分区单元1080写入存储器1004，这些分区单元实现了用于从存储器1004读取和写入数据的存储器接口。结果可通过NVLink 1010传输至另一个PPU 1004或CPU。在一个实施例中，PPU 1000包含数量U个分区单元1080，该数量等于耦合至PPU 1000的单独且不同的存储器设备1004的数量。分区单元1080将在下文结合图11B进行更详细的描述。
+
+
+
+
+[0196] In an embodiment, a host processor executes a driver kernel that implements an application programming interface (API) that enables one or more applications executing on the host processor to schedule operations for execution on the PPU 1000. In an embodiment, multiple compute applications are simultaneously executed by the PPU 1000 and the PPU 1000 provides isolation, quality of service (QoS), and independent address spaces for the multiple compute applications. An application may generate instructions (e.g., API calls) that cause the driver kernel to generate one or more tasks for execution by the PPU 1000. The driver kernel outputs tasks to one or more streams being processed by the PPU 1000. Each task may comprise one or more groups of related threads, referred to herein as a warp. In an embodiment, a warp comprises 32 related threads that may be executed in parallel. Cooperating threads may refer to a plurality of threads including instructions to perform the task and that may exchange data through shared memory. Threads, cooperating threads and a hierarchical grouping of threads such as cooperating thread arrays (CTA) and cooperating group arrays (CGA) according to some embodiments are described in more detail in U.S. Application No. 17/691,621, the entire content of which is hereby incorporated by reference in its entirety.
+
+> 
+[0196] 在一个实施例中，主机处理器执行一个驱动内核，该驱动内核实现应用程序编程接口（API），使主机处理器上运行的一个或多个应用程序能够调度操作以在PPU 1000上执行。在一个实施例中，多个计算应用程序由PPU 1000同时执行，并且PPU 1000为这些多个计算应用程序提供隔离、服务质量（QoS）和独立的地址空间。应用程序可以生成指令（例如，API调用），使驱动内核生成一个或多个任务以供PPU 1000执行。驱动内核将任务输出至PPU 1000正在处理的一个或多个流。每个任务可以包括一组或多组相关线程，本文中将其称为一个线程束。在一个实施例中，一个线程束包括32个可并行执行的相关线程。协作线程可以指包含执行任务指令的多个线程，这些线程可以通过共享内存交换数据。根据一些实施例的线程、协作线程以及线程的层级分组，例如协作线程阵列（CTA）和协作组阵列（CGA），在美国申请第17/691,621号中有更详细的描述，其全部内容通过引用整体并入本文。
+
+
+
+
+[0197] FIG. 11A illustrates a GPC 1050 of the PPU 1000 of FIG. 10, in accordance with an embodiment. As shown in FIG. 11A, each GPC 1050 includes a number of hardware units for processing tasks. In an embodiment, each GPC 1050 includes a pipeline manager 1110, a pre-raster operations unit (PROP) 1115, a raster engine 1125, a work distribution crossbar (WDX) 1180, a memory management unit (MMU) 1190, and one or more Data Processing Clusters (DPCs) 1120. It will be appreciated that the GPC 1050 of FIG. 11A may include other hardware units in lieu of or in addition to the units shown in FIG. 11A.
+
+> 
+[0197] 图 11A 示出了根据一个实施例的图 10 的 PPU 1000 的 GPC 1050。如图 11A 所示，每个 GPC 1050 包括多个用于处理任务的硬件单元。在一个实施例中，每个 GPC 1050 包括管线管理器 1110、预光栅操作单元（PROP）1115、光栅引擎 1125、工作分配交叉开关（WDX）1180、内存管理单元（MMU）1190 以及一个或多个数据处理集群（DPC）1120。应当理解，图 11A 的 GPC 1050 可以包括替代或附加于图 11A 所示单元的其他硬件单元。
+
+
+
+
+[0198] In an embodiment, the operation of the GPC 1050 is controlled by the pipeline manager 1110. The pipeline manager 1110 manages the configuration of the one or more DPCs 1120 for processing tasks allocated to the GPC 1050. In an embodiment, the pipeline manager 1110 may configure at least one of the one or more DPCs 1120 to implement at least a portion of a graphics rendering pipeline, a neural network, and/or a compute pipeline. For example, with respect to a graphics rendering pipeline, a DPC 1120 may be configured to execute a vertex shader program on the programmable streaming multiprocessor (SM) 1140. The pipeline manager 1110 may also be configured to route packets received from the work distribution unit 1025 to the appropriate logical units within the GPC 1050. For example, some packets may be routed to fixed function hardware units in the PROP 1115 and/or raster engine 1125 while other packets may be routed to the DPCs 1120 for processing by the primitive engine 1135 or the SM 1140.
+
+> 
+[0198] 在一个实施例中，GPC 1050的操作由管线管理器1110控制。管线管理器1110管理一个或多个DPC 1120的配置，以处理分配给GPC 1050的任务。在一个实施例中，管线管理器1110可以配置一个或多个DPC 1120中的至少一个来实现图形渲染管线、神经网络和/或计算管线的至少一部分。例如，对于图形渲染管线，DPC 1120可被配置为在可编程流多处理器(SM)1140上执行顶点着色器程序。管线管理器1110还可被配置为将从工作分发单元1025接收到的数据包路由到GPC 1050内适当的逻辑单元。例如，一些数据包可被路由到PROP 1115和/或光栅引擎1125中的固定功能硬件单元，而其他数据包可被路由到DPC 1120，以由图元引擎1135或SM 1140处理。
+
+
+
+
+[0199] The PROP unit 1115 is configured to route data generated by the raster engine 1125 and the DPCs 1120 to a Raster Operations (ROP) unit, described in more detail in conjunction with FIG. 11B. The PROP unit 1115 may also be configured to perform optimizations for color blending, organize pixel data, perform address translations, and the like.
+
+> 
+[0199] PROP单元1115被配置为将光栅引擎1125和DPC 1120生成的数据路由至光栅操作（ROP）单元，该单元结合图11B进行更详细描述。PROP单元1115还可被配置为执行色彩混合优化、组织像素数据、执行地址转换等操作。
+
+
+
+
+[0200] Each DPC 1120 included in the GPC 1050 includes an M-Pipe Controller (MPC) 1130, a primitive engine 1135, and one or more SMs 1140. The MPC 1130 controls the operation of the DPC 1120, routing packets received from the pipeline manager 1110 to the appropriate units in the DPC 1120. For example, packets associated with a vertex may be routed to the primitive engine 1135, which is configured to fetch vertex attributes associated with the vertex from the memory 1004. In contrast, packets associated with a shader program may be transmitted to the SM 1140.
+
+> 
+[0200] GPC 1050中包含的每个DPC 1120均包括一个M-Pipe控制器（MPC）1130、一个图元引擎1135以及一个或多个SM 1140。MPC 1130控制DPC 1120的运行，将从管线管理器1110接收的数据包路由到DPC 1120中的适当单元。例如，与顶点相关的数据包可能被路由至图元引擎1135，该引擎配置为从存储器1004中获取与顶点关联的顶点属性。相反，与着色器程序相关的数据包则可能被传输至SM 1140。
+
+
+
+
+[0201] The SM 1140 comprises a programmable streaming processor that is configured to process tasks represented by a number of threads. Each SM 1140 is multi-threaded and configured to execute a plurality of threads (e.g., 32 threads) from a particular group of threads concurrently. In an embodiment, the SM 1140 implements a SIMD (Single-Instruction, Multiple-Data) architecture where each thread in a group of threads (e.g., a warp) is configured to process a different set of data based on the same set of instructions. All threads in the group of threads execute the same instructions. In another embodiment, the SM 1140 implements a SIMT (Single-Instruction, Multiple Thread) architecture where each thread in a group of threads is configured to process a different set of data based on the same set of instructions, but where individual threads in the group of threads are allowed to diverge during execution. In an embodiment, a program counter, call stack, and execution state is maintained for each warp, enabling concurrency between warps and serial execution within warps when threads within the warp diverge. In another embodiment, a program counter, call stack, and execution state is maintained for each individual thread, enabling equal concurrency between all threads, within and between warps. When execution state is maintained for each individual thread, threads executing the same instructions may be converged and executed in parallel for maximum efficiency. The SM 1140 is described in more detail below in conjunction with FIG. 12A.
+
+> 
+[0201] SM 1140 包含一个可编程流处理器，其配置用于处理由多个线程表示的任务。每个 SM 1140 都是多线程的，并配置为从特定线程组并发执行多个线程（例如，32个线程）。在一个实施例中，SM 1140 实现了 SIMD（单指令多数据）架构，其中线程组（例如，线程束）中的每个线程配置为基于相同指令集处理不同数据集。该线程组中的所有线程都执行相同指令。在另一个实施例中，SM 1140 实现了 SIMT（单指令多线程）架构，其中线程组中的每个线程配置为基于相同指令集处理不同数据集，但允许组内各线程在执行过程中产生分歧。在一个实施例中，为每个线程束维护程序计数器、调用栈和执行状态，从而在线程束内线程出现分歧时，实现线程束之间的并发与线程束内的串行执行。在另一个实施例中，则为每个独立线程维护程序计数器、调用栈和执行状态，使得所有线程无论在束内还是束间都能实现同等并发度。当为每个独立线程维护执行状态时，执行相同指令的线程可以汇聚并行执行，以实现最高效率。SM 1140 将在下文结合图12A作更详细描述。
+
+
+
+
+[0202] The MMU 1190 provides an interface between the GPC 1050 and the partition unit 1080. The MMU 1190 may provide translation of virtual addresses into physical addresses, memory protection, and arbitration of memory requests. In an embodiment, the MMU 1190 provides one or more translation lookaside buffers (TLBs) for performing translation of virtual addresses into physical addresses in the memory 1004.
+
+> 
+[0202] MMU 1190提供GPC 1050与分区单元1080之间的接口。MMU 1190可提供虚拟地址到物理地址的转换、内存保护以及内存请求的仲裁。在一个实施例中，MMU 1190提供一个或多个转换后备缓冲器（TLB），用于对存储器1004中的虚拟地址到物理地址进行转换。
+
+
+
+
+[0203] FIG. 11B illustrates a memory partition unit 1080 of the PPU 1000 of FIG. 10 in accordance with an embodiment. As shown in FIG. 11B, the memory partition unit 1080 includes a Raster Operations (ROP) unit 1150, a level two (L2) cache 1160, and a memory interface 1170. The memory interface 1170 is coupled to the memory 1004. Memory interface 1170 may implement 32, 64, 128, 1024-bit data buses, or the like, for high-speed data transfer. In an embodiment, the PPU 1000 incorporates U memory interfaces 1170, one memory interface 1170 per pair of partition units 1080, where each pair of partition units 1080 is connected to a corresponding memory device 1004. For example, PPU 1000 may be connected to up to Y memory devices 1004, such as high bandwidth memory stacks or graphics double-data-rate, version 5, synchronous dynamic random access memory, or other types of persistent storage. [0204] In an embodiment, the memory interface 1170 implements an HBM2 memory interface and Y equals half U. In an embodiment, the HBM2 memory stacks are located on the same physical package as the PPU 1000, providing substantial power and area savings compared with conventional GDDR5 SDRAM systems. In an embodiment, each HBM2 stack includes four memory dies and Y equals 4, with HBM2 stack including two 128-bit channels per die for a total of 8 channels and a data bus width of 1024 bits.
+
+> 
+[0203] 图11B展示了根据一个实施例的图10中PPU 1000的内存分区单元1080。如图11B所示，内存分区单元1080包括一个光栅操作（ROP）单元1150、一个二级（L2）缓存1160和一个内存接口1170。该内存接口1170耦合到内存1004。内存接口1170可实现32位、64位、128位、1024位数据总线等，以进行高速数据传输。在一个实施例中，PPU 1000集成了U个内存接口1170，每对分区单元1080对应一个内存接口1170，其中每对分区单元1080连接到一个对应的内存设备1004。例如，PPU 1000可连接到多达Y个内存设备1004，如高带宽内存堆栈或图形双倍数据速率版本5同步动态随机存取存储器（GDDR5 SDRAM），或其他类型的持久存储设备。
+
+[0204] 在一个实施例中，内存接口1170实现了HBM2内存接口，且Y等于U的一半。在一个实施例中，这些HBM2内存堆栈与PPU 1000位于同一物理封装内，与传统的GDDR5 SDRAM系统相比，可显著节省功耗和面积。在一个实施例中，每个HBM2堆栈包含四个内存裸片，Y等于4，每个裸片提供两个128位通道，总共8个通道，数据总线宽度为1024位。
+
+
+
+
+[0205] In an embodiment, the memory 1004 supports Single-Error Correcting Double-Error Detecting (SECDED) Error Correction Code (ECC) to protect data. ECC provides higher reliability for compute applications that are sensitive to data corruption. Reliability is especially important in large-scale cluster computing environments where PPUs 1000 process very large datasets and/or run applications for extended periods.
+
+> 
+[0205] 在一个实施例中，存储器1004支持单错误纠正双错误检测（SECDED）纠错码（ECC）以保护数据。ECC为对数据损坏敏感的计算应用提供了更高的可靠性。在大规模集群计算环境中，当PPU 1000处理非常大的数据集和/或长时间运行应用时，可靠性尤为重要。
+
+
+
+
+[0206] In an embodiment, the PPU 1000 implements a multi-level memory hierarchy. In an embodiment, the memory partition unit 1080 supports a unified memory to provide a single unified virtual address space for CPU and PPU 300 memory, enabling data sharing between virtual memory systems. In an embodiment the frequency of accesses by a PPU 1000 to memory located on other processors is traced to ensure that memory pages are moved to the physical memory of the PPU 1000 that is accessing the pages more frequently. In an embodiment, the NVLink 1010 supports address translation services allowing the PPU 1000 to directly access a CPU's page tables and providing full access to CPU memory by the PPU 1000.
+
+> 
+[0206] 在一个实施例中，PPU 1000 实现了多级存储器层次结构。在一个实施例中，内存分区单元 1080 支持统一内存，为 CPU 和 PPU 300 内存提供单一的统一虚拟地址空间，从而能够在虚拟内存系统间共享数据。在一个实施例中，会追踪 PPU 1000 对其他处理器上内存的访问频率，以确保将内存页面迁移到更频繁访问这些页面的 PPU 1000 的物理内存中。在一个实施例中，NVLink 1010 支持地址转换服务，允许 PPU 1000 直接访问 CPU 的页表，并为 PPU 1000 提供对 CPU 内存的完全访问。
+
+
+
+
+[0207] In an embodiment, copy engines transfer data between multiple PPUs 1000 or between PPUs 1000 and CPUs. The copy engines can generate page faults for addresses that are not mapped into the page tables. The memory partition unit 1080 can then service the page faults, mapping the addresses into the page table, after which the copy engine can perform the transfer. In a conventional system, memory is pinned (e.g., non-pageable) for multiple copy engine operations between multiple processors, substantially reducing the available memory. With hardware page faulting, addresses can be passed to the copy engines without worrying if the memory pages are resident, and the copy process is transparent.
+
+> 
+[0207] 在一个实施例中，复制引擎在多个 PPU 1000 之间或在 PPU 1000 与 CPU 之间传输数据。复制引擎可针对未映射到页表中的地址产生页错误。随后，内存分区单元 1080 可以服务这些页错误，将地址映射至页表，之后复制引擎即可执行传输。在传统系统中，内存被固定（例如，不可分页）以用于多个处理器间的多个复制引擎操作，这大幅减少了可用内存。而借助硬件页错误处理，地址可传递给复制引擎，无需担心内存页面是否驻留，且复制过程是透明的。
+
+
+
+
+[0208] Data from the memory 1004 or other system memory may be fetched by the memory partition unit 1080 and stored in the L2 cache 1160, which is located on-chip and is shared between the various GPCs 1050. As shown, each memory partition unit 1080 includes a portion of the L2 cache 1160 associated with a corresponding memory device 1004. Lower level caches may then be implemented in various units within the GPCs 1050. For example, each of the SMs 1140 may implement a level one (L1) cache. The L1 cache is private memory that is dedicated to a particular SM 1140. Data from the L2 cache 1160 may be fetched and stored in each of the L1 caches for processing in the functional units of the SMs 1140. The L2 cache 1160 is coupled to the memory interface 1170 and the XBar 1070.
+
+> 
+来自内存 1004 或其他系统内存的数据可以被内存分区单元 1080 读取并存储到 L2 缓存 1160 中，该缓存位于片上并在多个 GPC 1050 间共享。如图所示，每个内存分区单元 1080 包含 L2 缓存 1160 中与相应内存设备 1004 关联的部分。更低级别的缓存随后可在 GPCs 1050 内的各单元中实现。例如，每个 SM 1140 可实现一个一级 (L1) 缓存。L1 缓存是专用于特定 SM 1140 的私有内存。来自 L2 缓存 1160 的数据可被读取并存储到每个 L1 缓存中，以供 SM 1140 的功能单元处理。L2 缓存 1160 与内存接口 1170 和 XBar 1070 耦合。
+
+
+
+
+[0209] The ROP unit 1150 performs graphics raster operations related to pixel color, such as color compression, pixel blending, and the like. The ROP unit 450 also implements depth testing in conjunction with the raster engine 1125, receiving a depth for a sample location associated with a pixel fragment from the culling engine of the raster engine 1125. The depth is tested against a corresponding depth in a depth buffer for a sample location associated with the fragment. If the fragment passes the depth test for the sample location, then the ROP unit 1150 updates the depth buffer and transmits a result of the depth test to the raster engine 1125. It will be appreciated that the number of partition units 1080 may be different than the number of GPCs 1050 and, therefore, each ROP unit 1150 may be coupled to each of the GPCs 1050. The ROP unit 1150 tracks packets received from the different GPCs 1050 and determines which GPC
+
+> 
+[0209] ROP单元1150执行与像素颜色相关的图形光栅操作，如颜色压缩、像素混合等。ROP单元450还结合光栅引擎1125实现深度测试，从光栅引擎1125的剔除引擎接收与像素片段关联的样本位置的深度。该深度会与深度缓冲区中对应片段样本位置的深度进行比较。如果片段通过了样本位置的深度测试，则ROP单元1150更新深度缓冲区，并将深度测试结果传送至光栅引擎1125。应理解，分区单元1080的数量可能与GPC 1050的数量不同，因此每个ROP单元1150可能耦合到每个GPC 1050。ROP单元1150追踪从不同GPC 1050接收的数据包，并确定哪个GPC
+
+
+
+
+1050 that a result generated by the ROP unit 1150 is routed to through the Xbar 1070. Although the ROP unit 1150 is included within the memory partition unit 1080 in FIG. 11B, in other embodiment, the ROP unit 1150 may be outside of the memory partition unit 1080. For example, the ROP unit 1150 may reside in the GPC 1050 or another unit.
+
+> 
+1050 表明由 ROP 单元 1150 生成的结果通过 Xbar 1070 被路由到。尽管在图 11B 中，ROP 单元 1150 包含在内存分区单元 1080 内，但在其他实施例中，ROP 单元 1150 可能位于内存分区单元 1080 之外。例如，ROP 单元 1150 可以位于 GPC 1050 或另一个单元中。
+
+
+
+
+[0210] FIG. 12 illustrates the streaming multiprocessor 1140 of FIG. 11A, in accordance with an embodiment. As shown in FIG. 12, the SM 1140 includes an instruction cache 1205, one or more scheduler units 1210, a register file 1220, one or more processing cores 1250, one or more special function units (SFUs) 1252, one or more load/store units (LSUs) 1254, an interconnect network 1280, a shared memory/L1 cache 1270.
+
+> 
+[0210] 图12示出了根据一个实施例的图11A的流多处理器1140。如图12所示，SM 1140包括指令缓存1205、一个或多个调度器单元1210、寄存器文件1220、一个或多个处理核心1250、一个或多个特殊功能单元(SFU)1252、一个或多个加载/存储单元(LSU)1254、互连网络1280、共享内存/L1缓存1270。
+
+
+
+
+[0211] As described above, the work distribution unit 1025 dispatches tasks for execution on the GPCs 1050 of the PPU 1000. The tasks are allocated to a particular DPC 1120 within a GPC 1050 and, if the task is associated with a shader program, the task may be allocated to an SM 1140. The scheduler unit 1210 receives the tasks from the work distribution unit 1025 and manages instruction scheduling for one or more thread blocks assigned to the SM 1140. The scheduler unit 1210 schedules thread blocks for execution as warps of parallel threads, where each thread block is allocated at least one warp. In an embodiment, each warp executes 32 threads. The scheduler unit 1210 may manage a plurality of different thread blocks, allocating the warps to the different thread blocks and then dispatching instructions from the plurality of different cooperative groups to the various functional units (e.g., cores 1250, SFUs 1252, and LSUs 1254) during each clock cycle.
+
+> 
+[0211] 如上所述，工作分配单元1025将任务分发到PPU 1000的GPC 1050上执行。这些任务被分配给GPC 1050内的特定DPC 1120，并且如果任务与着色器程序相关联，则该任务可被分配给SM 1140。调度器单元1210从工作分配单元1025接收任务，并管理分配给SM 1140的一个或多个线程块的指令调度。调度器单元1210将线程块调度为并行线程的warp执行，其中每个线程块至少分配一个warp。在一个实施例中，每个warp执行32个线程。调度器单元1210可以管理多个不同的线程块，将warp分配给不同的线程块，然后在每个时钟周期内将来自多个不同协作组的指令分派到各种功能单元（例如，核心1250、SFU 1252和LSU 1254）。
+
+
+
+
+[0212] Cooperative Groups is a programming model for organizing groups of communicating threads that allows developers to express the granularity at which threads are communicating, enabling the expression of richer, more efficient parallel decompositions. Cooperative launch APIs support synchronization amongst thread blocks for the execution of parallel algorithms. Conventional programming models provide a single, simple construct for synchronizing cooperating threads: a barrier across all threads of a thread block (e.g., the syncthreads() function). However, programmers would often like to define groups of threads at smaller than thread block granularities and synchronize within the defined groups to enable greater performance, design flexibility, and software reuse in the form of collective group-wide function interfaces.
+
+> 
+[0212] 协作组（Cooperative Groups）是一种用于组织通信线程组的编程模型，它允许开发者表达线程通信的粒度，从而实现更丰富、更高效的并行分解。协作启动 API 支持线程块之间的同步，以便执行并行算法。传统的编程模型为同步协作线程提供了单一、简单的构造：跨线程块所有线程的屏障（例如 syncthreads() 函数）。然而，程序员通常希望定义粒度小于线程块的线程组，并在已定义的组内进行同步，从而以集体组范围函数接口的形式实现更高的性能、设计灵活性和软件重用。
+
+
+
+
+[0213] Cooperative Groups enables programmers to define groups of threads explicitly at sub-block (e.g., as small as a single thread) and multi-block granularities, and to perform collective operations such as synchronization on the threads in a cooperative group. The programming model supports clean composition across software boundaries, so that libraries and utility functions can synchronize safely within their local context without having to make assumptions about convergence. Cooperative Groups primitives enable new patterns of cooperative parallelism, including producer-consumer parallelism, opportunistic parallelism, and global synchronization across an entire grid of thread blocks. Hierarchical grouping of threads such as cooperating thread arrays (CTA) and cooperating group arrays (CGA) according to some embodiments are described in more detail in U.S. Application No. 17/691,621, the entire content of which is hereby incorporated by reference in its entirety.
+
+> 
+[0213] 协作组（Cooperative Groups）使程序员能够显式地在子块（例如，小到单个线程）和多块粒度上定义线程组，并对协作组中的线程执行集合操作（如同步）。该编程模型支持跨软件边界的清晰组合，因此库和实用函数可以在其本地上下文中安全地同步，而无需对收敛性做出假设。协作组原语支持新的协作并行模式，包括生产者-消费者并行、机会主义并行，以及跨整个线程块网格的全局同步。根据一些实施例，诸如协作线程阵列（CTA）和协作组阵列（CGA）的线程分层分组在美国申请号17/691,621中有更详细的描述，其全部内容通过引用整体并入本文。
+
+
+
+
+[0214] A dispatch unit 1215 is configured to transmit instructions to one or more of the functional units. In the embodiment, the scheduler unit 1210 includes two dispatch units 1215 that enable two different instructions from the same warp to be dispatched during each clock cycle. In alternative embodiments, each scheduler unit 1210 may include a single dispatch unit 1215 or additional dispatch units 1215.
+
+> 
+[0214] 发射单元1215被配置为向一个或多个功能单元传输指令。在该实施例中，调度单元1210包括两个发射单元1215，使得每个时钟周期可以从同一线程束分派两条不同的指令。在替代实施例中，每个调度单元1210可以包括单个发射单元1215或额外的发射单元1215。
+
+
+
+
+[0215] Each SM 1140 includes a register file 1220 that provides a set of registers for the functional units of the SM 1140. In an embodiment, the register file 1220 is divided between each of the functional units such that each functional unit is allocated a dedicated portion of the register file 1220. In another embodiment, the register file 1220 is divided between the different warps being executed by the SM 1140. The register file 1220 provides temporary storage for operands connected to the data paths of the functional units.
+
+> 
+[0215] 每个 SM 1140 包括一个寄存器文件 1220，该寄存器文件为 SM 1140 的功能单元提供一组寄存器。在一个实施例中，寄存器文件 1220 在各个功能单元之间划分，使得每个功能单元被分配寄存器文件 1220 的一个专用部分。在另一个实施例中，寄存器文件 1220 在 SM 1140 执行的不同线程束之间划分。寄存器文件 1220 为连接到功能单元数据路径的操作数提供临时存储。
+
+
+
+
+[0216] Each SM 1140 comprises multiple processing cores 1250. In an embodiment, the SM 1140 includes a large number (e.g., 128, etc.) of distinct processing cores 1250. Each core 1250 may include a fully-pipelined, single-precision, double-precision, and/or mixed precision processing unit that includes a floating point arithmetic logic unit and an integer arithmetic logic unit. In an embodiment, the floating point arithmetic logic units implement the IEEE 754-2008 standard for floating point arithmetic. In an embodiment, the cores 1250 include 64 single-precision (32-bit) floating point cores, 64 integer cores, 32 double-precision (64-bit) floating point cores, and 8 tensor cores.
+
+> 
+[0216] 每个SM 1140包含多个处理核心1250。在一个实施例中，SM 1140包括大量（例如，128个等）独立处理核心1250。每个核心1250可包含一个全流水线、单精度、双精度和/或混合精度处理单元，该处理单元包括一个浮点算术逻辑单元和一个整数算术逻辑单元。在一个实施例中，浮点算术逻辑单元实现了IEEE 754-2008浮点算术标准。在一个实施例中，核心1250包括64个单精度（32位）浮点核心、64个整数核心、32个双精度（64位）浮点核心和8个张量核心。
+
+
+
+
+[0217] Tensor cores are configured to perform matrix operations, and, in an embodiment, one or more tensor cores are included in the cores 1250. In particular, the tensor cores are configured to perform deep learning matrix arithmetic, such as convolution operations for neural network training and inferencing. In an embodiment, each tensor core operates on a 4x4 matrix and performs a matrix multiply and accumulate operation D=AxB+C, where A, B, C, and D are 4x4 matrices.
+
+> 
+[0217] 张量核心被配置为执行矩阵操作，并且在一个实施例中，一个或多个张量核心包含在核心1250中。特别是，张量核心被配置为执行深度学习矩阵算术，例如用于神经网络训练和推理的卷积操作。在一个实施例中，每个张量核心对4x4矩阵进行操作，并执行矩阵乘加运算D=AxB+C，其中A、B、C和D是4x4矩阵。
+
+
+
+
+[0218] In an embodiment, the matrix multiply inputs A and B are 16-bit floating point matrices, while the accumulation matrices C and D may be 16-bit floating point or 32- bit floating point matrices. Tensor cores operate on 16-bit floating point input data with 32-bit floating point accumulation. The 16-bit floating point multiply requires 64 operations and results in a full precision product that is then accumulated using 32-bit floating point addition with the other intermediate products for a 4x4x4 matrix multiply. In practice, Tensor cores are used to perform much larger two-dimensional or higher dimensional matrix operations, built up from these smaller elements. An API, such as CUDA C++ API, exposes specialized matrix load, matrix multiply and accumulate, and matrix store operations to efficiently use Tensor cores from a CUDA-C++ program. At the CUDA level, the warp-level interface assumes 16x16 size matrices spanning all 32 threads of the warp.
+
+> 
+[0218] 在一个实施例中，矩阵乘法输入 A 和 B 是 16 位浮点矩阵，而累加矩阵 C 和 D 可以是 16 位浮点或 32 位浮点矩阵。张量核心对 16 位浮点输入数据进行运算，并使用 32 位浮点进行累加。16 位浮点乘法需要 64 次操作，产生一个全精度乘积，随后通过 32 位浮点加法与其他中间乘积一起累加，完成 4x4x4 矩阵乘法。实践中，张量核心用于执行由这些较小单元构建的、更大的二维或更高维矩阵操作。诸如 CUDA C++ API 这样的 API 公开了专门的矩阵加载、矩阵乘加以及矩阵存储操作，以便在 CUDA-C++ 程序中高效使用张量核心。在 CUDA 层面，线程束级接口假定使用 16x16 尺寸的矩阵，跨越线程束的所有 32 个线程。
+
+
+
+
+[0219] In some embodiments, transposition hardware is included in the processing cores1250or another functional unit (e.g., SFUs 1252 or LSUs 1254) and is configured to generate matrix data stored by diagonals and/or generate the original matrix and/or transposed matrix from the matrix data stored by diagonals. The transposition hardware may be provide inside of the shared memory 1270 to register file 1220 load path of the SM 1140.
+
+> 
+[0219] 在一些实施例中，转置硬件包含在处理核心1250或另一功能单元（例如，SFU 1252或LSU 1254）中，并被配置为生成按对角线存储的矩阵数据和/或从按对角线存储的矩阵数据生成原始矩阵和/或转置矩阵。该转置硬件可提供在SM 1140的共享存储器1270至寄存器文件1220的加载路径内。
+
+
+
+
+[0220] In one example, the matrix data stored by diagonals may be fetched from DRAM and stored in the shared memory 1270. As the instruction to perform processing using the matrix data stored by diagonals is processed, transposition hardware disposed in the path of the shared memory 1270 and the register file 1220 may provide the original matrix, transposed matrix, compacted original matrix, and/or compacted transposed matrix. Up until the very last storage prior to instruction, the single matrix data stored by diagonals may be maintained, and the matrix type designated by the instruction is generated as needed in the register file 1220.
+
+> 
+[0220] 在一个示例中，按对角线存储的矩阵数据可以从DRAM中取出并存储在共享内存1270中。当处理使用按对角线存储的矩阵数据的指令时，布置在共享内存1270和寄存器文件1220的路径中的转置硬件可以提供原始矩阵、转置矩阵、压缩原始矩阵和/或压缩转置矩阵。直到指令之前的最后一次存储，单一的按对角线存储的矩阵数据可以被保持，并且由指令指定的矩阵类型根据需要生成在寄存器文件1220中。
+
+
+
+
+[0221] Each SM 1140 also comprises multiple SFUs 1252 that perform special functions (e.g., attribute evaluation, reciprocal square root, and the like). In an embodiment, the SFUs 1252 may include a tree traversal unit (e.g., TTU 1143) configured to traverse a hierarchical tree data structure. In an embodiment, the SFUs 1252 may include texture unit (e.g., Texture Unit 1142) configured to perform texture map filtering operations. In an embodiment, the texture units are configured to load texture maps (e.g., a 2D array of tex-els) from the memory 1004 and sample the texture maps to produce sampled texture values for use in shader programs executed by the SM 1140. In an embodiment, the texture maps are stored in the shared memory/L1 cache 1170 . The texture units implement texture operations such as filtering operations using mip-maps (e.g., texture maps of varying levels of detail). In an embodiment, each SM 1140 includes two texture units.
+
+> 
+[0221] 每个流式多处理器（SM）1140 还包含多个特殊功能单元（SFU）1252，用于执行特殊功能（如属性评估、倒数平方根等）。在一个实施例中，SFU 1252 可包括树遍历单元（如 TTU 1143），该单元配置用于遍历分层树形数据结构。在一个实施例中，SFU 1252 可包括纹理单元（如纹理单元 1142），配置用于执行纹理贴图滤波操作。在一个实施例中，纹理单元配置为从存储器 1004 加载纹理贴图（例如，纹素的二维数组），并对这些纹理贴图进行采样，以生成采样纹理值，供 SM 1140 执行的着色器程序使用。在一个实施例中，纹理贴图存储在共享内存/L1 缓存 1170 中。纹理单元利用 mip 贴图（如不同细节级别的纹理贴图）实现纹理操作，例如滤波操作。在一个实施例中，每个 SM 1140 包含两个纹理单元。
+
+
+
+
+[0222] Each SM 1140 also comprises multiple LSUs 1254 that implement load and store operations between the shared memory/L1 cache 1270 and the register file 1220. Each SM 1140 includes an interconnect network 1280 that connects each of the functional units to the register file 1220 and the LSU 1254 to the register file 1220, shared memory/ L1 cache 1270. In an embodiment, the interconnect network 1280 is a crossbar that can be configured to connect any of the functional units to any of the registers in the register file 1220 and connect the LSUs 1254 to the register file 1220 and memory locations in shared memory/L1 cache 1270.
+
+> 
+[0222] 每个 SM 1140 还包含多个 LSU 1254，用于在共享内存/L1 缓存 1270 与寄存器文件 1220 之间执行加载和存储操作。每个 SM 1140 包括一个互联网络 1280，该网络将各个功能单元连接到寄存器文件 1220，并将 LSU 1254 连接到寄存器文件 1220 和共享内存/L1 缓存 1270。在一个实施例中，互联网络 1280 是一个交叉开关，可被配置为将任何功能单元连接到寄存器文件 1220 中的任意寄存器，并将 LSU 1254 连接到寄存器文件 1220 以及共享内存/L1 缓存 1270 中的内存位置。
+
+
+
+
+[0223] The shared memory/L1 cache 1270 is an array of on-chip memory that allows for data storage and communication between the SM 1140 and the primitive engine 1135 and between threads in the SM 1140. In an embodiment, the shared memory/L1 cache 1270 comprises 128KB of storage capacity and is in the path from the SM 1140 to the partition unit 1080. The shared memory/L1 cache 1270 can be used to cache reads and writes. One or more of the shared memory/L1 cache 1270, L2 cache 1160, and memory 1004 are backing stores.
+
+> 
+[0223] 共享内存/L1缓存1270是一块片上存储器阵列，用于在SM 1140与图元引擎1135之间以及SM 1140内的线程之间进行数据存储与通信。在一个实施例中，共享内存/L1缓存1270拥有128KB的存储容量，并位于从SM 1140到分区单元1080的路径上。共享内存/L1缓存1270可用于缓存读取和写入操作。共享内存/L1缓存1270、L2缓存1160和存储器1004中的一个或多个为后备存储。
+
+
+
+
+[0224] Combining data cache and shared memory functionality into a single memory block provides the best overall performance for both types of memory accesses. The capacity is usable as a cache by programs that do not use shared memory. For example, if shared memory is configured to use half of the capacity, texture and load/store operations can use the remaining capacity. Integration within the shared memory/L1 cache 1270 enables the shared memory/ L1 cache 1270 to function as a high-throughput conduit for streaming data while simultaneously providing high-bandwidth and low-latency access to frequently reused data.
+
+> 
+[0224] 将数据缓存和共享内存功能合并到单个内存块中，可为这两类内存访问提供最佳整体性能。对于不使用共享内存的程序，该容量可用作缓存。例如，如果共享内存被配置为使用一半容量，纹理和加载/存储操作便可使用剩余容量。与共享内存/L1 缓存 1270 的集成使共享内存/ L1 缓存 1270 能够充当流数据的高吞吐量通道，同时为频繁重用的数据提供高带宽和低延迟访问。
+
+
+
+
+[0225] In the context of this disclosure, an SM or "streaming multiprocessor" means a processor architected as described in USP7,447,873 to Nordquist including improvements thereto and advancements thereof, and as implemented for example in many generations of NVIDIA GPUs. For example, an SM may comprise a plurality of processing engines or cores configured to concurrently execute a plurality of threads arranged in a plurality of single-instruction, multiple-data (SIMD) groups (e.g., warps), wherein each of the threads in a same one of the SIMD groups executes a same data processing program comprising a sequence of instructions on a different input object, and different threads in the same one of the SIMD group are executed using different ones of the processing engines or cores. An SM may typically also provide (a) a local register file having plural lanes, wherein each processing engine or core is configured to access a different subset of the lanes; and instruction issue logic configured to select one of the SIMD groups and to issue one of the instructions of the same data processing program to each of the plurality of processing engines in parallel, wherein each processing engine executes the same instruction in parallel with each other processing engine using the subset of the local register file lanes accessible thereto. An SM typically further includes core interface logic configured to initiate execution of one or more SIMD groups. As shown in the figures, such SMs have been constructed to provide fast local shared memory enabling data sharing/reuse and synchronization between all threads of a CTA executing on the SM.
+
+> 
+[0225] 在本公开的上下文中，SM或“流式多处理器”意指如USP7,447,873中Nordquist所描述的、包含其改进和演进的处理器架构，并且例如在诸多代NVIDIA GPU中实现。例如，SM可包括多个处理引擎或核心，其配置为并发执行排列在多个单指令多数据(SIMD)组（例如，warp）中的多个线程，其中同一个SIMD组中的每个线程在不同输入对象上执行包含指令序列的相同数据处理程序，且同一个SIMD组中的不同线程使用不同的处理引擎或核心来执行。SM通常还可提供(a)具有多个通道的本地寄存器文件，其中每个处理引擎或核心配置为访问所述通道的不同子集；以及指令发射逻辑，其配置为选择所述SIMD组之一并将所述相同数据处理程序的指令之一并行发射到所述多个处理引擎中的每一个，其中每个处理引擎使用可被其访问的本地寄存器文件通道子集，与其他每个处理引擎并行执行相同指令。SM通常还包括核心接口逻辑，其配置为发起一个或多个SIMD组的执行。如图所示，此类SM已被构建为提供快速的本地共享存储器，从而使得在SM上执行的CTA的所有线程之间能够进行数据共享/重用和同步。
+
+
+
+
+[0226] When configured for general purpose parallel computation, a simpler configuration can be used compared with graphics processing. Specifically, the fixed function graphics processing units shown in FIG. 11A, are bypassed, creating a much simpler programming model. In the general purpose parallel computation configuration, the work distribution unit 1025 assigns and distributes blocks of threads directly to the DPCs 1120. The threads in a block execute the same program, using a unique thread ID in the calculation to ensure each thread generates unique results, using the SM 1140 to execute the program and perform calculations, shared memory/L1 cache 1270 to communicate between threads, and the LSU 1254 to read and write global memory through the shared memory/L1 cache 1270 and the memory partition unit 1080. When configured for general purpose parallel computation, the SM 1140 can also write commands that the scheduler unit1020can use to launch new work on the DPCs 1120.
+
+> 
+[0226] 当配置用于通用并行计算时，可以采用比图形处理更简洁的配置。具体而言，绕过图 11A 所示的固定功能图形处理单元，从而建立更简单的编程模型。在通用并行计算配置中，工作分配单元 1025 直接将线程块分配并分发至 DPC 1120。一个块内的线程执行同一程序，在计算中使用唯一的线程 ID 以确保每个线程生成唯一结果，利用 SM 1140 执行程序并完成计算，利用共享内存/L1 缓存 1270 进行线程间通信，并通过 LSU 1254 经由共享内存/L1 缓存 1270 和内存分区单元 1080 读写全局内存。当配置用于通用并行计算时，SM 1140 还能写入调度器单元 1020 可用于在 DPC 1120 上启动新工作的命令。
+
+
+
+
+[0227] The PPU 1000 may be included in a desktop computer, a laptop computer, a tablet computer, servers, supercomputers, a smart-phone (e.g., a wireless, hand-held device), personal digital assistant (PDA), a digital camera, a vehicle, a head mounted display, a hand-held electronic device, and the like. In an embodiment, the PPU 1000 is embodied on a single semiconductor substrate. In another embodiment, the PPU 1000 is included in a system-on-a-chip (SoC) along with one or more other devices such as additional PPUs 1000, the memory 1004, a reduced instruction set computer (RISC) CPU, a memory management unit (MMU), a digital-to-analog converter (DAC), and the like. [0228] In an embodiment, the PPU 1000 may be included on a graphics card that includes one or more memory devices 1004. The graphics card may be configured to interface with a PCIe slot on a motherboard of a desktop computer. In yet another embodiment, the PPU 1000 may be an integrated graphics processing unit (iGPU) or parallel processor included in the chipset of the motherboard.
+
+> 
+[0227] PPU 1000 可被包含于台式计算机、笔记本电脑、平板电脑、服务器、超级计算机、智能手机（例如，无线手持设备）、个人数字助理（PDA）、数码相机、车辆、头戴式显示器、手持电子设备等设备中。在一个实施例中，PPU 1000 实现在单个半导体衬底上。在另一实施例中，PPU 1000 与一个或多个其他设备一起包含在片上系统（SoC）中，例如额外的 PPU 1000、存储器 1004、精简指令集计算机（RISC）CPU、内存管理单元（MMU）、数模转换器（DAC）等。[0228] 在一个实施例中，PPU 1000 可包含在包括一个或多个存储器设备 1004 的图形卡上。该图形卡可被配置为与台式计算机主板上的 PCIe 插槽接口连接。在又一实施例中，PPU 1000 可以是集成图形处理单元（iGPU）或包含在主板芯片组中的并行处理器。
+
+
+
+
+## Exemplary Computing System
+
+[0229] Systems with multiple GPUs and CPUs are used in a variety of industries as developers expose and leverage more parallelism in applications such as artificial intelligence computing. High-performance GPU-accelerated systems with tens to many thousands of compute nodes are deployed in data centers, research facilities, and supercomputers to solve ever larger problems. As the number of processing devices within the high-performance systems increases, the communication and data transfer mechanisms need to scale to support the increased bandwidth.
+
+> 
+[0229] 配备多个GPU和CPU的系统被广泛应用于各行各业，因为开发者正在挖掘并利用人工智能计算等应用中的更多并行性。拥有数十至数千个计算节点的高性能GPU加速系统，被部署在数据中心、研究机构和超级计算机中，以应对日益庞大的问题。随着高性能系统内处理设备数量的增加，通信与数据传输机制需要相应扩展，以支持不断增长的带宽。
+
+
+
+
+[0230] FIG. 13A is a conceptual diagram of a processing system 1300 implemented using the PPU 1000 of FIG. 10, in accordance with an embodiment. The exemplary system 1300 may be configured to implement the methods disclosed in this application (e.g., the TMAU in FIGS. 1, 2, 6 or 11A). The processing system 1300 includes a CPU 1330, switch 1355, and multiple PPUs 1000 each and respective memories 1004. The NVLink 1010 provides high-speed communication links between each of the PPUs 1000. Although a particular number of NVLink 1010 and interconnect 1002 connections are illustrated in FIG. 13A, the number of connections to each PPU 1000 and the CPU 1330 may vary. The switch 1355 interfaces between the interconnect 1002 and the CPU 1330. The PPUs 1000, memories 1004, and NVLinks 1010 may be situated on a single semiconductor platform to form a parallel processing module 1325. In an embodiment, the switch 1355 supports two or more protocols to interface between various different connections and/or links.
+
+> 
+[0230] 图13A是根据一个实施例，使用图10的PPU 1000实现的处理系统1300的概念图。示例性系统1300可被配置为实现本申请所公开的方法（例如，图1、图2、图6或图11A中的TMAU）。处理系统1300包括CPU 1330、交换机1355、多个PPU 1000及其各自的存储器1004。NVLink 1010提供各PPU 1000之间的高速通信链路。尽管图13A中展示了特定数量的NVLink 1010和互连1002连接，但每个PPU 1000和CPU 1330的连接数量可能有所不同。交换机1355在互连1002和CPU 1330之间提供接口。PPU 1000、存储器1004和NVLink 1010可位于单个半导体平台上，以形成并行处理模块1325。在一个实施例中，交换机1355支持两种或更多协议，以便在各种不同的连接和/或链路之间进行接口。
+
+
+
+
+[0231] In another embodiment (not shown), the NVLink 1010 provides one or more high-speed communication links between each of the PPUs 1000 and the CPU 1330 and the switch 1355 interfaces between the interconnect 1002 and each of the PPUs 1000. The PPUs 1000, memories 1004, and interconnect 1002 may be situated on a single semiconductor platform to form a parallel processing module 1325. In yet another embodiment (not shown), the interconnect 1002 provides one or more communication links between each of the PPUs 1000 and the CPU 1330 and the switch 1355 interfaces between each of the PPUs 1000 using the NVLink 1010 to provide one or more high-speed communication links between the PPUs 1000. In another embodiment (not shown), the NVLink 1010 provides one or more high-speed communication links between the PPUs 1000 and the CPU 1330 through the switch 1355. In yet another embodiment (not shown), the interconnect 1002 provides one or more communication links between each of the PPUs 1000 directly. One or more of the NVLink 1010 high-speed communication links may be implemented as a physical NVLink interconnect or either an on-chip or on-die interconnect using the same protocol as the NVLink 1010. [0232] In the context of the present description, a single semiconductor platform may refer to a sole unitary semiconductor-based integrated circuit fabricated on a die or chip. It should be noted that the term single semiconductor platform may also refer to multichip modules with increased connectivity which simulate on-chip operation and make substantial improvements over utilizing a conventional bus implementation. Of course, the various circuits or devices may also be situated separately or in various combinations of semiconductor platforms per the desires of the user. Alternately, the parallel processing module 1325 may be implemented as a circuit board substrate and each of the PPUs 1000 and/or memories 1004 may be packaged devices. In an embodiment, the CPU 1330, switch 1355, and the parallel processing module 1325 are situated on a single semiconductor platform.
+
+> 
+[0231] 在另一未示出的实施例中，NVLink 1010 为每个 PPU 1000 与 CPU 1330 之间提供了一条或多条高速通信链路，而交换机 1355 则在互连 1002 与每个 PPU 1000 之间提供接口。PPU 1000、存储器 1004 和互连 1002 可布置在单一半导体平台上，构成并行处理模块 1325。在又一未示出的实施例中，互连 1002 为每个 PPU 1000 与 CPU 1330 之间提供一条或多条通信链路，同时交换机 1355 利用 NVLink 1010 在每个 PPU 1000 之间提供接口，从而在 PPU 1000 之间实现一条或多条高速通信链路。在另一个未示出的实施例中，NVLink 1010 通过交换机 1355 为 PPU 1000 与 CPU 1330 之间提供一条或多条高速通信链路。在再一未示出的实施例中，互连 1002 直接在每个 PPU 1000 之间提供一条或多条通信链路。一条或多条 NVLink 1010 高速通信链路可以实现为采用与 NVLink 1010 相同协议的物理 NVLink 互连，或者片上或管芯上互连。
+
+[0232] 在本说明书的上下文中，单一半导体平台可以指在单个管芯或芯片上制造的单一整体半导体基集成电路。应当注意，术语单一半导体平台也可以指具有增强连接性的多芯片模块，这些模块模拟片上操作，并相对于使用传统总线实现方式做出了实质性改进。当然，各种电路或器件也可以根据用户的需要单独布置或以各种半导体平台的组合形式布置。或者，并行处理模块 1325 可以实现为电路板基板，而每个 PPU 1000 和/或存储器 1004 可以是封装器件。在一个实施例中，CPU 1330、交换机 1355 和并行处理模块 1325 布置在单一半导体平台上。
+
+
+
+
+[0233] In an embodiment, the signaling rate of each NVLink 1010 is 20 to 25 Gigabits/second and each PPU 1000 includes six NVLink 1010 interfaces (as shown in FIG. 13A, five NVLink 1010 interfaces are included for each PPU 1000). Each NVLink 1010 provides a data transfer rate of 25 Gigabytes/second in each direction, with six links providing 1000 Gigabytes/second. The NVLinks 1010 can be used exclusively for PPU-to-PPU communication as shown in FIG. 13A, or some combination of PPU-to-PPU and PPU-to-CPU, when the CPU 1330 also includes one or more NVLink 1010 interfaces.
+
+> 
+[0233] 在一个实施例中，每个 NVLink 1010 的信令速率为 20 至 25 千兆比特/秒，每个 PPU 1000 包含六个 NVLink 1010 接口（如图 13A 所示，每个 PPU 1000 包含五个 NVLink 1010 接口）。每个 NVLink 1010 在每个方向上提供 25 千兆字节/秒的数据传输速率，六条链路合起来提供 1000 千兆字节/秒。NVLink 1010 可仅用于 PPU 到 PPU 的通信，如图 13A 所示，或者在 CPU 1330 也包含一个或多个 NVLink 1010 接口时，用于 PPU 到 PPU 和 PPU 到 CPU 的某种组合。
+
+
+
+
+[0234] In an embodiment, the NVLink 1010 allows direct load/store/atomic access from the CPU 1330 to each PPU's 1000 memory 1004. In an embodiment, the NVLink 1010 supports coherency operations, allowing data read from the memories 1004 to be stored in the cache hierarchy of the CPU 1330, reducing cache access latency for the CPU 1330. In an embodiment, the NVLink 1010 includes support for Address Translation Services (ATS), allowing the PPU 1000 to directly access page tables within the CPU 1330. One or more of the NVLinks 1010 may also be configured to operate in a low-power mode.
+
+> 
+[0234] 在一个实施例中，NVLink 1010 允许从 CPU 1330 直接进行加载/存储/原子访问每个 PPU 1000 的内存 1004。在一个实施例中，NVLink 1010 支持一致性操作，允许将从内存 1004 读取的数据存储在 CPU 1330 的缓存层次结构中，从而降低 CPU 1330 的缓存访问延迟。在一个实施例中，NVLink 1010 包括对地址转换服务（ATS）的支持，允许 PPU 1000 直接访问 CPU 1330 内的页表。一个或多个 NVLink 1010 也可以被配置为在低功耗模式下运行。
+
+
+
+
+[0235] FIG. 13B illustrates an exemplary system 1365 in which the various architecture and/or functionality of the various previous embodiments may be implemented. The exemplary system 1365 may be configured to implement the methods disclosed in this application (e.g., the TMAU in FIGS. 1, 2, 6 or 11A).
+
+> 
+[0235] 图13B示出了一个示例性系统1365，在其中可实现前述各种实施例的各种架构和/或功能。该示例性系统1365可被配置为实现本申请中公开的方法（例如，图1、图2、图6或图11A中的TMAU）。
+
+
+
+
+[0236] As shown, a system 1365 is provided including at least one central processing unit 1330 that is connected to a communication bus 1375. The communication bus 1375 may be implemented using any suitable protocol, such as PCI (Peripheral Component Interconnect), PCI-Express, AGP (Accelerated Graphics Port), HyperTransport, or any other bus or point-to-point communication protocol(s). The system 1365 also includes a main memory 1340. Control logic (software) and data are stored in the main memory 1340 which may take the form of random access memory (RAM).
+
+> 
+[0236] 如图所示，提供了一个系统1365，其包括至少一个连接至通信总线1375的中央处理单元1330。该通信总线1375可使用任何合适的协议实现，例如PCI（外设组件互连）、PCI-Express、AGP（加速图形端口）、HyperTransport，或任何其他总线或点对点通信协议。系统1365还包括主内存1340。控制逻辑（软件）和数据存储在主内存1340中，该主内存可采用随机存取存储器（RAM）的形式。
+
+
+
+
+[0237] The system 1365 also includes input devices 1360, the parallel processing system 1325, and display devices 1345, e.g. a conventional CRT (cathode ray tube), LCD (liquid crystal display), LED (light emitting diode), plasma display or the like. User input may be received from the input devices 1360, e.g., keyboard, mouse, touchpad, microphone, and the like. Each of the foregoing modules and/or devices may even be situated on a single semiconductor platform to form the system 1365. Alternately, the various modules may also be situated separately or in various combinations of semiconductor platforms per the desires of the user.
+
+> 
+[0237] 该系统1365还包括输入设备1360、并行处理系统1325，以及显示设备1345，例如常规CRT（阴极射线管）、LCD（液晶显示）、LED（发光二极管）、等离子显示器等。用户输入可通过输入设备1360接收，例如键盘、鼠标、触摸板、麦克风等。上述各模块和/或设备甚至可位于单一半导体平台上，以构成该系统1365。或者，根据用户需求，各种模块也可单独设置或采用半导体平台的各种组合。
+
+
+
+
+[0238] Further, the system 1365 may be coupled to a network (e.g., a telecommunications network, local area network (LAN), wireless network, wide area network (WAN) such as the Internet, peer-to-peer network, cable network, or the like) through a network interface 1335 for communication purposes.
+
+> 
+[0238] 进一步地，系统1365可通过网络接口1335耦合至网络（例如电信网络、局域网(LAN)、无线网络、广域网(WAN)如互联网、对等网络、有线网络等）以用于通信目的。
+
+
+
+
+[0239] The system 1365 may also include a secondary storage (not shown). The secondary storage includes, for example, a hard disk drive and/or a removable storage drive, representing a floppy disk drive, a magnetic tape drive, a compact disk drive, digital versatile disk (DVD) drive, recording device, universal serial bus (USB) flash memory. The removable storage drive reads from and/or writes to a removable storage unit in a well-known manner.
+
+> 
+[0239] 系统1365还可以包括辅助存储器（未示出）。辅助存储器例如包括硬盘驱动器和/或可移动存储驱动器，代表软盘驱动器、磁带驱动器、光盘驱动器、数字多功能光盘（DVD）驱动器、记录设备、通用串行总线（USB）闪存。可移动存储驱动器以众所周知的方式从可移动存储单元读取和/或向其写入。
+
+
+
+
+[0240] Computer programs, or computer control logic algorithms, may be stored in the main memory 1340 and/ or the secondary storage. Such computer programs, when executed, enable the system 1365 to perform various functions. The memory 1340, the storage, and/or any other storage are possible examples of computer-readable media.
+
+> 
+[0240] 计算机程序或计算机控制逻辑算法可存储于主存储器1340和/或辅助存储器中。此类计算机程序在执行时使系统1365能够执行各种功能。存储器1340、存储装置和/或任何其他存储介质都是计算机可读介质的可能示例。
+
+
+
+
+[0241] The architecture and/or functionality of the various previous figures may be implemented in the context of a general computer system, a circuit board system, a game console system dedicated for entertainment purposes, an application-specific system, and/or any other desired system. For example, the system 1365 may take the form of a desktop computer, a laptop computer, a tablet computer, servers, supercomputers, a smart-phone (e.g., a wireless, hand-held device), personal digital assistant (PDA), a digital camera, a vehicle, a head mounted display, a hand-held electronic device, a mobile phone device, a television, workstation, game consoles, embedded system, and/or any other type of logic.
+
+> 
+[0241] 前述各附图所示架构和/或功能可以在通用计算机系统、电路板系统、专用于娱乐目的的游戏机系统、专用系统和/或任何其他所需系统的环境中实现。例如，系统1365可以采用台式计算机、笔记本电脑、平板电脑、服务器、超级计算机、智能手机（例如无线手持设备）、个人数字助理（PDA）、数码相机、车辆、头戴式显示器、手持电子设备、移动电话设备、电视机、工作站、游戏机、嵌入式系统和/或任何其他类型的逻辑形式。
+
+
+
+
+[0242] An application program may be implemented via an application executed by a host processor, such as a CPU. In an embodiment, a device driver may implement an application programming interface (API) that defines various functions that can be utilized by the application program in order to generate graphical data for display. The device driver is a software program that includes a plurality of instructions that control the operation of the PPU 1000. The API provides an abstraction for a programmer that lets a programmer utilize specialized graphics hardware, such as the PPU 1000, to generate the graphical data without requiring the programmer to utilize the specific instruction set for the PPU 1000. The application may include an API call that is routed to the device driver for the PPU 1000. The device driver interprets the API call and performs various operations to respond to the API call. In some instances, the device driver may perform operations by executing instructions on the CPU. In other instances, the device driver may perform operations, at least in part, by launching operations on the PPU 1000 utilizing an input/output interface between the CPU and the PPU 1000. In an embodiment, the device driver is configured to implement the graphics processing pipeline 1400 utilizing the hardware of the PPU 1000.
+
+> 
+[0242] 应用程序可以通过由主机处理器（如CPU）执行的应用程序来实现。在一个实施例中，设备驱动程序可以实现一个应用程序编程接口（API），该接口定义了可供应用程序用于生成图形数据进行显示的各种函数。设备驱动程序是一个软件程序，包含控制PPU 1000操作的多条指令。API为程序员提供了一种抽象，使程序员能够利用诸如PPU 1000之类的专用图形硬件来生成图形数据，而无需使用PPU 1000的特定指令集。应用程序可以包含一个API调用，该调用被路由到PPU 1000的设备驱动程序。设备驱动程序解析API调用并执行各种操作以响应该调用。在某些情况下，设备驱动程序可以通过在CPU上执行指令来执行操作。在其他情况下，设备驱动程序可以至少部分地通过利用CPU与PPU 1000之间的输入/输出接口，在PPU 1000上发起操作来执行操作。在一个实施例中，设备驱动程序被配置为利用PPU 1000的硬件来实现图形处理管线1400。
+
+
+
+
+[0243] Various programs may be executed within the PPU 1000 in order to implement the various stages of the processing for the application program. For example, the device driver may launch a kernel on the PPU 1000 to perform one stage of processing on one SM 1140 (or multiple SMs 1140). The device driver (or the initial kernel executed by the PPU 1000) may also launch other kernels on the PPU 1000 to perform other stages of the processing. If the application program processing includes a graphics processing pipeline, then some of the stages of the graphics processing pipeline may be implemented on fixed unit hardware such as a rasterizer or a data assembler implemented within the PPU 1000. It will be appreciated that results from one kernel may be processed by one or more intervening fixed function hardware units before being processed by a subsequent kernel on an SM 1140.
+
+> 
+[0243] 为实现应用程序处理的各个阶段，可在PPU 1000内执行多种程序。例如，设备驱动程序可在PPU 1000上启动一个内核，以在一个SM 1140（或多个SM 1140）上执行某一处理阶段。设备驱动程序（或由PPU 1000执行的初始内核）也可在PPU 1000上启动其他内核，以执行其他处理阶段。若应用程序处理包含图形处理流水线，则图形处理流水线的某些阶段可在固定单元硬件上实现，如PPU 1000内实现的光栅化器或数据装配器。可以理解，一个内核的结果在被SM 1140上的后续内核处理之前，可能会经过一个或多个中间固定功能硬件单元的处理。
+
+
+
+
+[0244] All patents, patent applications and publications cited herein are incorporated by reference for all purposes as if expressly set forth.
+
+> 
+[0244] 本文中引用的所有专利、专利申请和出版物均以引用方式并入本文，如同明确阐述一般，用于所有目的。
+
+
+
+
+[0245] While the invention has been described in connection with what is presently considered to be the most practical and preferred embodiment, it is to be understood that the invention is not to be limited to the disclosed embodiment, but on the contrary, is intended to cover various modifications and equivalent arrangements included within the spirit and scope of the appended claims.
+
+> 
+[0245] 虽然本发明已结合当前被视为最实用且优选的实施方案进行了描述，但应理解，本发明不限于所公开的实施方案，相反，旨在涵盖包含在所附权利要求的精神和范围内的各种修改和等同配置。
+
+
+
+
+1. A method of synchronizing an exchange of data between a producer on a first processor and a consumer on a second processor, comprising:
+
+> 
+1. 一种在第一处理器上的生产者与第二处理器上的消费者之间同步数据交换的方法，包括：
+
+
+
+
+receiving, at the second processor, a first data message from the producer, the first data message identifying the data; in response to the first data message, storing the data in a memory buffer associated with the second processor;
+
+> 
+在第二处理器处，从生产者接收第一数据消息，该第一数据消息标识所述数据；响应于所述第一数据消息，将所述数据存储在与所述第二处理器关联的内存缓冲区中；
+
+
+
+
+updating a barrier memory structure in a memory associated with the second processor, wherein an elapsed time from the storing to the updating is less than a one-way time from the producer to the second processor; and in response to the updating, providing for the data in the memory buffer to be read by the consumer.
+
+> 
+更新与第二处理器相关联的内存中的屏障内存结构，其中从所述存储到所述更新的经过时间小于从生产者到所述第二处理器的单向时间；并且响应于所述更新，使所述内存缓冲区中的数据可供所述消费者读取。
+
+
+
+
+2. The method according to claim 1, wherein the consumer and the producer are in respective cooperative thread arrays (CTA) in a same cooperative grid array (CGA), and wherein the memory buffer and the barrier memory structure are in a shared memory associated with the second processor.
+
+> 
+2. 根据权利要求1所述的方法，其中所述消费者和所述生产者位于同一协作网格阵列(CGA)中的相应协作线程阵列(CTA)内，并且其中所述存储缓冲区和所述屏障存储器结构位于与所述第二处理器相关联的共享存储器中。
+
+
+
+
+3. The method according to claim 1, wherein a time elapsed from a sending of the first data message by the producer to receiving notification of availability of the data in the memory buffer by the consumer is less than a latency of a roundtrip from the producer to the memory buffer.
+
+> 
+3. 根据权利要求1所述的方法，其中，从所述生产者发送所述第一数据消息起至所述消费者接收到所述存储器缓冲器中的数据可用的通知所经过的时间，小于从所述生产者到所述存储器缓冲器的往返延迟。
+
+
+
+
+4. The method according to claim 1, further comprises:
+
+> 
+4. 根据权利要求1所述的方法，进一步包括：
+
+
+
+
+receiving a second data message from a second producer, the second data message including a second data; and
+
+> 
+从第二生产者接收第二数据消息，所述第二数据消息包括第二数据；以及
+
+
+
+
+in response to the second data message, storing the second data in the memory buffer and updating the barrier memory structure,
+
+> 
+响应于第二数据消息，将所述第二数据存储于所述内存缓冲区中并更新所述屏障内存结构，
+
+
+
+
+wherein said providing for the data in the memory buffer to be read by the consumer is performed in response to the updating in response to the first data message and the updating in response to the second data message.
+
+> 
+其中，所述使存储器缓冲区中的数据可供消费者读取的操作是响应于根据第一数据消息进行的更新和根据第二数据消息进行的更新而执行的。
+
+
+
+
+5. The method according to claim 4, wherein performing the providing for the data in the memory buffer to be read by the consumer if a clear condition of the barrier memory structure is satisfied.
+
+> 
+5. 根据权利要求4所述的方法，其中，如果屏障存储器结构的清除条件得到满足，则执行提供操作，以使存储器缓冲器中的数据被消费者读取。
+
+
+
+
+6. The method according to claim 1, wherein performing the providing for the data in the memory buffer to be read by the consumer if a clear condition of the barrier memory structure is satisfied.
+
+> 
+6. 根据权利要求1所述的方法，其中，如果屏障存储器结构的清除条件被满足，则执行对所述存储器缓冲区中的数据的提供，以供所述消费者读取。
+
+
+
+
+7. The method according to claim 1, wherein the memory barrier structure comprises a first memory barrier structure co-located with the consumer and a second memory barrier structure co-located with the producer, wherein, after the sending of the first data message to the consumer, the producer waits on the second barrier structure, and, after reading the data in the memory buffer, the consumer arrives at the second barrier memory structure.
+
+> 
+7. 根据权利要求1所述的方法，其中，所述内存屏障结构包括与消费者并置的第一内存屏障结构和与生产者并置的第二内存屏障结构，其中，在将第一数据消息发送给消费者之后，生产者等待在第二屏障结构上，并且在读取内存缓冲器中的数据之后，消费者到达所述第二屏障内存结构。
+
+
+
+
+8. The method according to claim 1, wherein the first data message represents, in a single message, a write of the data to the memory buffer and an update to the memory barrier structure.
+
+> 
+8. 根据权利要求1所述的方法，其中，所述第一数据消息在单个消息中表示将数据写入内存缓冲区以及对内存屏障结构的更新。
+
+
+
+
+9. The method according to claim 1, wherein the first data message includes a combined store and arrive instruction comprising an address of the memory buffer, an address of the barrier memory structure, and the data.
+
+> 
+9. 根据权利要求1所述的方法，其中，所述第一数据消息包括组合存储与到达指令，该指令包含所述内存缓冲区的地址、所述屏障内存结构的地址以及所述数据。
+
+
+
+
+10. The method according to claim 9, wherein the barrier memory structure comprises an arrive count and a transaction count, wherein, in response to the first data message, the arrive count and the transaction count are updated and the transaction count is updated in accordance with an amount of data associated with the first data message.
+
+> 
+10. 根据权利要求9所述的方法，其中，所述屏障内存结构包括到达计数和事务计数，其中，响应于第一数据消息，更新所述到达计数和所述事务计数，并且所述事务计数根据与所述第一数据消息相关联的数据量进行更新。
+
+
+
+
+11. The method according to claim 1, atomically performing the storing the data in the memory buffer and the updating the barrier memory structure.
+
+> 
+11. 根据权利要求1所述的方法，原子地执行将数据存储在内存缓冲区中以及更新屏障存储器结构。
+
+
+
+
+12. The method according to claim 1, wherein the updating of the barrier memory structure is performed in response to receiving one or more second data messages from the first processor.
+
+> 
+12. 根据权利要求1所述的方法，其中，所述屏障存储器结构的更新是响应于接收到来自第一处理器的一个或多个第二数据消息而执行的。
+
+
+
+
+13. The method according to claim 12, wherein the one or more second data messages comprise a respective second data message for each path configured in an interconnect switch from the first processor to the second processor.
+
+> 
+13. 根据权利要求12所述的方法，其中，所述一个或多个第二数据消息包括针对互连交换机中从第一处理器到第二处理器配置的每条路径的相应第二数据消息。
+
+
+
+
+14. The method according to claim 13,
+
+> 
+14. 根据权利要求13所述的方法，
+
+
+
+
+wherein the barrier memory structure includes an expected arrive count, an actual arrive count, and a fence transaction count,
+
+> 
+其中该屏障存储结构包括预期到达计数、实际到达计数和栅栏事务计数，
+
+
+
+
+wherein the first data message is transmitted before the second data message by the first processor, and
+
+> 
+其中，所述第一数据消息由所述第一处理器在所述第二数据消息之前传输，并且
+
+
+
+
+wherein the actual arrive count is updated in response to receiving each first data message, and the fence transaction count is updated in response to receiving each second data message.
+
+> 
+其中，实际到达计数响应于接收到每个第一数据消息而被更新，并且栅栏事务计数响应于接收到每个第二数据消息而被更新。
+
+
+
+
+15. The method according to claim 14, wherein the consumer waits on the barrier memory structure and wherein the barrier memory structure is cleared when the actual arrive count equals the expected arrive count and the fence transaction count represents all said data is written to the data buffer.
+
+> 
+15. 根据权利要求14所述的方法，其中，所述消费者在屏障存储器结构上等待，并且其中，当实际到达计数等于预期到达计数且围栏事务计数表示所有所述数据已写入数据缓冲区时，清除所述屏障存储器结构。
+
+
+
+
+16. The method according to claim 1, wherein a buffer queue is configured in an external memory associated with the producer, wherein the second processor pushes receive buffer information to the buffer queue and the producer pops the destination buffer information from the buffer queue, wherein the first processor transmits the data to the receive buffer through the external memory and the second processor writes the data to a memory of the second processor.
+
+> 
+16. 根据权利要求1所述的方法，其中在与生产者关联的外部存储器中配置有缓冲区队列，所述第二处理器将接收缓冲区信息推送到所述缓冲区队列，所述生产者从所述缓冲区队列弹出目标缓冲区信息，其中所述第一处理器通过所述外部存储器将所述数据传送到所述接收缓冲区，所述第二处理器将所述数据写入所述第二处理器的存储器。
+
+
+
+
+17. The method according to claim 16, wherein an agent is initiated in response to a message from the producer, and the agent coordinates exchange of the data from an output queue in a memory of the first processor to an input queue in a local memory of the second processor in coordination with respective direct memory access components in the first processor and the second processor.
+
+> 
+17. 根据权利要求16所述的方法，其中，响应于来自生产者的消息而启动代理，并且所述代理协调数据从第一处理器的存储器中的输出队列到第二处理器的本地存储器中的输入队列的交换，并与第一处理器和第二处理器中各自的直接存储器访问组件相协调。
+
+
+
+
+18. The method according to claim 1, wherein the first processor and the second processor are respective processors in a non-uniform memory access (NUMA)-organized system.
+
+> 
+18. 根据权利要求1所述的方法，其中，所述第一处理器和所述第二处理器分别是非一致内存访问（NUMA）组织系统中的处理器。
+
+
+
+
+19. A multiprocessor system comprising at least a first processor and a second processor, the first processor comprising a first memory and the second processor comprising a second memory, and an interconnect connecting the first processor and the second processor,
+
+> 
+19. 一种多处理器系统，包括至少第一处理器和第二处理器，所述第一处理器包括第一存储器，所述第二处理器包括第二存储器，以及连接所述第一处理器和所述第二处理器的互连结构，
+
+
+
+
+wherein the second processor is configured to:
+
+> 
+其中，所述第二处理器被配置为：
+
+
+
+
+receive a first data message;
+
+> 
+接收第一条数据消息；
+
+
+
+
+in response to the first data message, store a data included in the first data message in a memory buffer and update a barrier memory structure, wherein an elapsed time from the storing to the updating is less than a one-way time from a producer on the first processor to the second processor; and
+
+> 
+响应于第一数据消息，将包含在所述第一数据消息中的数据存储在存储器缓冲器中并更新屏障存储器结构，其中从所述存储到所述更新的经过时间小于从第一处理器上的生产者到第二处理器的单向时间；以及
+
+
+
+
+in response to the updating, provide for the data in the memory buffer to be read by a consumer on the second processor,
+
+> 
+响应于所述更新，提供所述存储器缓冲区中的数据以供第二处理器上的消费者读取，
+
+
+
+
+wherein the first processor is configured to:
+
+> 
+其中，第一处理器被配置为：
+
+
+
+
+transmit, from the producer, the first data message to the consumer.
+
+> 
+将第一则数据消息从生产者传输给消费者。
+
+
+
+
+20. The multiprocessor system according to claim 19, wherein the second processor is further configured to atomically perform said store a data included in the first data message in a memory buffer and said update a barrier memory structure.
+
+> 
+20. 根据权利要求19所述的多处理器系统，其中，所述第二处理器还被配置为原子地执行所述将包括在所述第一数据消息中的数据存储在存储器缓冲器中以及所述更新屏障存储器结构。
+
+
+
+
+21. The multiprocessor system according to claim 19, wherein each of the first processor and the second processor are streaming multiprocessors.
+
+> 
+21. 根据权利要求19所述的多处理器系统，其中，所述第一处理器和所述第二处理器中的每一个都是流式多处理器。
+
+
+
+
+22. The multiprocessor system according to claim 19, wherein the memory buffer and the barrier memory structure are in the second memory.
+
+> 
+22. 根据权利要求19所述的多处理器系统，其中，所述内存缓冲区和所述屏障内存结构位于所述第二存储器中。
+
+
+
+
+23. The multiprocessor system according to claim 19, wherein the first data message includes a combined store and arrive instruction comprising an address of the memory buffer, an address of the barrier memory structure and the data.
+
+> 
+23. 根据权利要求19所述的多处理器系统，其中，所述第一数据消息包括组合存储和到达指令，所述组合存储和到达指令包含所述内存缓冲区的地址、所述屏障内存结构的地址以及所述数据。
+
+
+
+
+24. The multiprocessor system according to claim 19, wherein the updating of the barrier memory structure is performed in response to receiving one or more second data messages from the first processor.
+
+> 
+24. 根据权利要求19所述的多处理器系统，其中所述屏障存储器结构的更新是响应于从所述第一处理器接收到一个或多个第二数据消息而执行的。
+
+
+
+
+25. The multiprocessor system according to claim 24, wherein the one or more second data messages comprise a respective second data message for each predetermined path configured in the interconnect.
+
+> 
+25.根据权利要求24所述的多处理器系统，其中，所述一个或多个第二数据消息包括针对在所述互连中配置的每个预定路径的相应第二数据消息。
+
+
+
+
+26. A method of synchronizing an exchange of data between a producer and a consumer, comprising:
+
+> 
+26. 一种在生产者与消费者之间同步数据交换的方法，包括：
+
+
+
+
+receiving a first data message from the producer;
+
+> 
+从生产者接收第一个数据消息；
+
+
+
+
+in response to the first data message, storing the data in a memory buffer and updating a barrier memory structure, wherein the first data message represents, in a single message, a write of the data to the memory buffer and an update to the memory barrier structure; and
+
+> 
+响应于第一数据消息，将数据存储在内存缓冲区中并更新屏障内存结构，其中，所述第一数据消息在单个消息中表示对内存缓冲区的数据写入以及对内存屏障结构的更新；以及
+
+
+
+
+in response to the updating, providing for the data in the memory buffer to be read by the consumer.
+
+> 
+响应更新，使得内存缓冲区中的数据可由消费者读取。
+
+
+
+
+27. A method of transferring data between first and second processors, comprising:
+
+> 
+27. 一种在第一处理器和第二处理器之间传输数据的方法，包括：
+
+
+
+
+a first processor writing data into a memory local to a second processor;
+
+> 
+第一处理器将数据写入第二处理器的本地存储器；
+
+
+
+
+the first processor writing a completion flag into the memory local to the second processor; and
+
+> 
+第一处理器将完成标志写入第二处理器的本地存储器；并且
+
+
+
+
+the second processor conditioning access to the data written into its local memory on the first processor writing the completion flag;
+
+> 
+第二个处理器对写入其本地内存的数据的访问，以第一个处理器写入完成标志为条件；
+
+
+
+
+wherein precautions prevent opportunistic execution reordering from defeating the conditioned access.
+
+> 
+其中，预防措施防止投机性执行重排序破坏条件访问。
