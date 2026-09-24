@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>6T SRAM 单元的立体版图</title>
+<style>
+:root{
+  --page:#E4E8EC;
+  --stage:#D3D9DF;
+  --panel:#EEF1F4;
+  --ink:#1D2733;
+  --muted:#586372;
+  --rule:#BFC7D0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  color:var(--ink);background:var(--page);font-size:14px;line-height:1.6;
+}
+.app{display:grid;grid-template-columns:1fr 348px;height:100vh}
+.stage{position:relative;overflow:hidden;background:var(--stage);touch-action:none}
+#c{display:block;width:100%;height:100%;cursor:grab}
+#c:active{cursor:grabbing}
+.title{position:absolute;left:24px;top:20px;max-width:30em;pointer-events:none}
+.title h1{font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:.02em}
+.title p{margin:0;color:var(--muted);font-size:13px}
+.labels{position:absolute;inset:0;pointer-events:none}
+.lbl{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:12px;
+  padding:1px 7px;border-radius:3px;background:rgba(255,255,255,.88);color:var(--ink);
+  border:1px solid rgba(29,39,51,.18)}
+.lbl.tx{font-weight:600}
+.lbl.net{background:rgba(29,39,51,.82);color:#fff;border-color:transparent}
+.lbl.dim{opacity:.25}
+.tip{position:absolute;pointer-events:none;max-width:260px;background:#fff;border:1px solid var(--rule);
+  border-radius:4px;padding:8px 10px;font-size:12.5px;box-shadow:0 2px 8px rgba(29,39,51,.12)}
+.tip b{display:block;font-size:13px;margin-bottom:2px}
+.tip .net{color:var(--muted)}
+.panel{background:var(--panel);border-left:1px solid var(--rule);overflow-y:auto;padding:20px 20px 32px}
+.panel section{padding:14px 0;border-bottom:1px solid var(--rule)}
+.panel section:first-child{padding-top:0}
+.panel section:last-child{border-bottom:0}
+.panel h2{font-size:14px;font-weight:600;margin:0 0 8px}
+.hint{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;font-size:13px;color:var(--ink);background:#fff;border:1px solid var(--rule);
+  border-radius:4px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.slider{display:flex;align-items:center;gap:10px}
+.slider input{flex:1;accent-color:var(--ink)}
+.slider output{min-width:3em;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.layers{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.layers label{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer}
+.sw{width:22px;height:12px;border-radius:2px;border:1px solid rgba(29,39,51,.3);flex:none}
+.layers .order{margin-left:auto;color:var(--muted);font-size:12px}
+.txgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.txgrid button{text-align:left}
+.readout{font-size:13.5px}
+.readout p{margin:0 0 6px}
+.readout .k{font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td{padding:4px 0;vertical-align:top;border-bottom:1px dashed var(--rule)}
+td:first-child{color:var(--muted);padding-right:8px;width:52%}
+tr:last-child td{border-bottom:0}
+.check{display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;height:auto}
+  .stage{height:62vh}
+  .panel{border-left:0;border-top:1px solid var(--rule)}
+  .title h1{font-size:18px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="stage" id="stage">
+    <canvas id="c" aria-label="6T SRAM 单元的三维版图"></canvas>
+    <div class="labels" id="labels"></div>
+    <header class="title">
+      <h1>6T SRAM 单元的立体版图</h1>
+      <p>拖动旋转，滚轮缩放，右键或 Shift+拖动平移。点击任意部件，高亮它所在的信号。</p>
+    </header>
+    <div class="tip" id="tip" hidden></div>
+  </section>
+
+  <aside class="panel">
+    <section>
+      <h2>层间距</h2>
+      <div class="slider">
+        <input id="explode" type="range" min="0" max="1" step="0.01" value="0" aria-label="层间距">
+        <output id="explodeOut">0%</output>
+      </div>
+      <p class="hint">0% 接近真实堆叠。拉大后各层分开，能看清孔是怎么把上下层连起来的。</p>
+    </section>
+
+    <section>
+      <h2>视角</h2>
+      <div class="row" id="views">
+        <button data-view="iso" aria-pressed="true">斜视</button>
+        <button data-view="top" aria-pressed="false">俯视（对照 2D 图）</button>
+        <button data-view="side" aria-pressed="false">侧视</button>
+      </div>
+      <label class="check"><input type="checkbox" id="showLabels" checked> 显示标注</label>
+    </section>
+
+    <section>
+      <h2>图层</h2>
+      <ul class="layers" id="layerList"></ul>
+      <p class="hint">从下往上排列。虚线框是单元边界。层与层之间实际填满绝缘介质，这里省略了。</p>
+    </section>
+
+    <section>
+      <h2>高亮信号</h2>
+      <div class="row" id="nets"></div>
+    </section>
+
+    <section>
+      <h2>高亮晶体管</h2>
+      <div class="txgrid" id="txs"></div>
+      <p class="hint">按它们在版图中的位置排列：上排 PMOS，中排下拉 NMOS，下排访问管。</p>
+    </section>
+
+    <section class="readout" id="readout"></section>
+
+    <section>
+      <h2>与 2D 图的对应</h2>
+      <table>
+        <tr><td>竖向蓝色点状条</td><td>金属2（紫）</td></tr>
+        <tr><td>横向蓝色斜线条</td><td>金属1（蓝）</td></tr>
+        <tr><td>黑色斜线图形</td><td>多晶硅（红）</td></tr>
+        <tr><td>灰色粗线</td><td>N 型有源区（绿）</td></tr>
+        <tr><td>上方浅蓝色短条</td><td>P 型有源区（橙）</td></tr>
+        <tr><td>黑色实心方块</td><td>接触孔（黑）</td></tr>
+        <tr><td>带 × 的方块</td><td>通孔（灰）</td></tr>
+      </table>
+      <p class="hint">原图没有图例，这里的层次对应是根据形状和连接关系推断的。</p>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ---------- 坐标：沿用 2D 图的像素坐标，换算到 3D ---------- */
+const S = 0.1;
+const X = p => (p - 265) * S;
+const Z = p => (p - 235) * S;
+
+const LAYER = {
+  sub:   {name:'P 型衬底',    color:0xA9B1BA, desc:'整块硅片，所有器件都做在它上面。'},
+  nwell: {name:'N 阱',        color:0xE3CF86, desc:'PMOS 必须做在 N 型区域里，所以上方两个 PMOS 被一块 N 阱包住。'},
+  ndiff: {name:'N 型有源区',  color:0x3E9C5A, desc:'NMOS 的源极、漏极所在区域。'},
+  pdiff: {name:'P 型有源区',  color:0xD98A2E, desc:'PMOS 的源极、漏极所在区域。'},
+  poly:  {name:'多晶硅',      color:0xC53A3E, desc:'晶体管的栅极材料，也可以当短距离导线。'},
+  cont:  {name:'接触孔',      color:0x2E3238, desc:'把金属1接到有源区或多晶硅上。'},
+  m1:    {name:'金属1',       color:0x3D7FD1, metal:true, desc:'第一层金属连线。'},
+  via:   {name:'通孔',        color:0x7A808A, metal:true, desc:'连接金属1和金属2。'},
+  m2:    {name:'金属2',       color:0x8B5FC6, metal:true, desc:'第二层金属连线，这里用作竖向的位线和地线。'}
+};
+const LAYER_ORDER = ['sub','nwell','ndiff','pdiff','poly','cont','m1','via','m2'];
+
+const NET = {
+  VDD:{name:'VDD 电源',   desc:'顶部横向的金属1。两段短金属1向下伸出，经接触孔接到两个 PMOS 的源极。'},
+  GND:{name:'GND 地',     desc:'金属2 竖线，压在单元左右边界上，与相邻单元共用。经通孔、金属1、接触孔接到下拉管的源极。'},
+  BL: {name:'BL 位线',    desc:'金属2 竖线，贯穿整列。在单元底部经通孔、金属1、接触孔接到左访问管。'},
+  BLB:{name:'BLB 反位线', desc:'与 BL 对称，接到右访问管。读的时候和 BL 组成一对差分信号。'},
+  WL: {name:'WL 字线',    desc:'由两条横线组成：下面的多晶硅本身就是两个访问管的栅极；上面并了一条金属1，用来降低长字线的电阻。'},
+  Q:  {name:'Q 存储节点', desc:'左侧 PMOS 和 NMOS 的漏极由一根竖向金属1 连在一起，这就是左反相器的输出。它再通过一条横向多晶硅送到右反相器的栅极。'},
+  QB: {name:'QB 反存储节点', desc:'右反相器的输出，结构与 Q 对称。它通过另一条横向多晶硅送到左反相器的栅极，完成交叉耦合。'}
+};
+
+const TX = {
+  PU_L:{name:'左上拉 PMOS', gate:'QB', a:'VDD', b:'Q',  body:'P 型有源区，位于 N 阱中'},
+  PU_R:{name:'右上拉 PMOS', gate:'Q',  a:'VDD', b:'QB', body:'P 型有源区，位于 N 阱中'},
+  PD_L:{name:'左下拉 NMOS', gate:'QB', a:'GND', b:'Q',  body:'N 型有源区'},
+  PD_R:{name:'右下拉 NMOS', gate:'Q',  a:'GND', b:'QB', body:'N 型有源区'},
+  AX_L:{name:'左访问管',    gate:'WL', a:'BL',  b:'Q',  body:'N 型有源区'},
+  AX_R:{name:'右访问管',    gate:'WL', a:'BLB', b:'QB', body:'N 型有源区'}
+};
+const TX_ORDER = ['PU_L','PU_R','PD_L','PD_R','AX_L','AX_R'];
+
+/* 各层高度，e 为层间距（0~1） */
+function levels(e){
+  return {
+    sub:[-3,0], nwell:[-2.2,0.015],
+    diff:[-0.5,0.07], ch:[-0.5,0.1],
+    poly:[0.4+2.4*e, 1.1+2.4*e],
+    m1:[2.6+5.8*e, 3.4+5.8*e],
+    m2:[4.9+9.4*e, 5.7+9.4*e]
+  };
+}
+
+/* ---------- 版图数据（像素矩形 [x1,y1,x2,y2]） ---------- */
+const shapes = [];
+function add(layer, r, o){ shapes.push(Object.assign({layer, r, net:null, tx:[], desc:null}, o)); }
+const diffExt = L => L.diff, chExt = L => L.ch;
+
+add('sub',   [80,40,450,400], {ext:L=>L.sub});
+add('nwell', [84,112,446,172], {ext:L=>L.nwell});
+
+// PMOS
+add('pdiff',[128,141,164,155],{net:'VDD',tx:['PU_L'],ext:diffExt,desc:'左上拉 PMOS 的源极，接 VDD。'});
+add('pdiff',[164,141,176,155],{tx:['PU_L'],ch:true,ext:chExt});
+add('pdiff',[176,141,215,155],{net:'Q',tx:['PU_L'],ext:diffExt,desc:'左上拉 PMOS 的漏极，属于 Q 节点。'});
+add('pdiff',[313,141,349,155],{net:'QB',tx:['PU_R'],ext:diffExt,desc:'右上拉 PMOS 的漏极，属于 QB 节点。'});
+add('pdiff',[349,141,361,155],{tx:['PU_R'],ch:true,ext:chExt});
+add('pdiff',[361,141,397,155],{net:'VDD',tx:['PU_R'],ext:diffExt,desc:'右上拉 PMOS 的源极，接 VDD。'});
+// 下拉 NMOS
+add('ndiff',[90,248,164,262],{net:'GND',tx:['PD_L'],ext:diffExt,desc:'左下拉 NMOS 的源极，接 GND。'});
+add('ndiff',[164,248,176,262],{tx:['PD_L'],ch:true,ext:chExt});
+add('ndiff',[176,248,215,262],{net:'Q',tx:['PD_L'],ext:diffExt,desc:'左下拉 NMOS 的漏极，属于 Q 节点。'});
+add('ndiff',[313,248,349,262],{net:'QB',tx:['PD_R'],ext:diffExt,desc:'右下拉 NMOS 的漏极，属于 QB 节点。'});
+add('ndiff',[349,248,361,262],{tx:['PD_R'],ch:true,ext:chExt});
+add('ndiff',[361,248,437,262],{net:'GND',tx:['PD_R'],ext:diffExt,desc:'右下拉 NMOS 的源极，接 GND。'});
+// 访问管
+add('ndiff',[201,262,215,333],{net:'Q',tx:['AX_L'],ext:diffExt,desc:'左访问管靠存储节点的一端，属于 Q 节点。'});
+add('ndiff',[201,333,215,347],{tx:['AX_L'],ch:true,ext:chExt});
+add('ndiff',[201,347,215,385],{net:'BL',tx:['AX_L'],ext:diffExt,desc:'左访问管靠位线的一端，接 BL。'});
+add('ndiff',[313,262,327,333],{net:'QB',tx:['AX_R'],ext:diffExt,desc:'右访问管靠存储节点的一端，属于 QB 节点。'});
+add('ndiff',[313,333,327,347],{tx:['AX_R'],ch:true,ext:chExt});
+add('ndiff',[313,347,327,385],{net:'BLB',tx:['AX_R'],ext:diffExt,desc:'右访问管靠位线的一端，接 BLB。'});
+
+// 多晶硅
+const polyExt = L => L.poly;
+add('poly',[164,118,176,285],{net:'QB',tx:['PU_L','PD_L'],ext:polyExt,desc:'左反相器的栅极。它同时横穿上方 P 型区和下方 N 型区，所以一根多晶硅就是两个管子的栅。'});
+add('poly',[349,118,361,285],{net:'Q',tx:['PU_R','PD_R'],ext:polyExt,desc:'右反相器的栅极，同时控制右上拉和右下拉。'});
+add('poly',[201,180,361,190],{net:'Q',ext:polyExt,desc:'交叉耦合连线：把 Q 送到右反相器的栅极。'});
+add('poly',[164,210,327,220],{net:'QB',ext:polyExt,desc:'交叉耦合连线：把 QB 送到左反相器的栅极。'});
+add('poly',[80,333,450,347],{net:'WL',tx:['AX_L','AX_R'],ext:polyExt,desc:'多晶硅字线，贯穿整行。它压过两条竖向有源区的地方，就是两个访问管。'});
+
+// 金属1
+const m1Ext = L => L.m1;
+add('m1',[80,90,450,104],{net:'VDD',ext:m1Ext,desc:'VDD 电源线，贯穿整行。'});
+add('m1',[128,97,142,155],{net:'VDD',ext:m1Ext,desc:'把 VDD 引到左 PMOS 源极。'});
+add('m1',[383,97,397,155],{net:'VDD',ext:m1Ext,desc:'把 VDD 引到右 PMOS 源极。'});
+add('m1',[201,141,215,262],{net:'Q',ext:m1Ext,desc:'把左侧 PMOS 漏极、NMOS 漏极和交叉耦合多晶硅连在一起，形成 Q 节点。'});
+add('m1',[313,141,327,262],{net:'QB',ext:m1Ext,desc:'把右侧 PMOS 漏极、NMOS 漏极和交叉耦合多晶硅连在一起，形成 QB 节点。'});
+add('m1',[80,305,450,319],{net:'WL',ext:m1Ext,desc:'字线的金属搭接，每隔一段与下方多晶硅字线相连，降低电阻。'});
+add('m1',[201,371,252,385],{net:'BL',ext:m1Ext,desc:'把左访问管接到上方的 BL 金属2。'});
+add('m1',[275,371,327,385],{net:'BLB',ext:m1Ext,desc:'把右访问管接到上方的 BLB 金属2。'});
+add('m1',[90,248,104,262],{net:'GND',ext:m1Ext,desc:'过渡用的金属1小块：下接有源区，上接 GND 金属2。'});
+add('m1',[423,248,437,262],{net:'GND',ext:m1Ext,desc:'过渡用的金属1小块：下接有源区，上接 GND 金属2。'});
+
+// 金属2
+const m2Ext = L => L.m2;
+add('m2',[90,40,104,400],{net:'GND',ext:m2Ext,desc:'GND 地线，压在单元边界上，与左侧相邻单元共用。'});
+add('m2',[238,40,252,400],{net:'BL',ext:m2Ext,desc:'位线 BL，贯穿整列，这一列所有单元都挂在它上面。'});
+add('m2',[275,40,289,400],{net:'BLB',ext:m2Ext,desc:'反位线 BLB，与 BL 成对。'});
+add('m2',[423,40,437,400],{net:'GND',ext:m2Ext,desc:'GND 地线，与右侧相邻单元共用。'});
+
+// 接触孔与通孔
+function sq(cx,cy,h){ return [cx-h,cy-h,cx+h,cy+h]; }
+[[135,148,'VDD'],[390,148,'VDD'],[208,148,'Q'],[320,148,'QB'],
+ [208,255,'Q'],[320,255,'QB'],[97,255,'GND'],[430,255,'GND'],
+ [208,378,'BL'],[320,378,'BLB']].forEach(([x,y,n])=>
+  add('cont',sq(x,y,4),{net:n,ext:L=>[L.diff[1],L.m1[0]],desc:'接触孔：连接有源区与金属1。'}));
+[[208,185,'Q'],[320,215,'QB']].forEach(([x,y,n])=>
+  add('cont',sq(x,y,4),{net:n,ext:L=>[L.poly[1],L.m1[0]],desc:'接触孔：连接多晶硅与金属1，这是交叉耦合的关键一跳。'}));
+[[97,255,'GND'],[430,255,'GND'],[245,378,'BL'],[282,378,'BLB']].forEach(([x,y,n])=>
+  add('via',sq(x,y,4.5),{net:n,ext:L=>[L.m1[1],L.m2[0]]}));
+
+/* ---------- Three.js 场景 ---------- */
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.setClearColor(0xD3D9DF);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 500);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a939d, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7);
+sun.position.set(20, 40, 25); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.25);
+fill.position.set(-25, 15, -20); scene.add(fill);
+
+const unitBox = new THREE.BoxGeometry(1,1,1);
+const unitEdges = new THREE.EdgesGeometry(unitBox);
+const recs = [];
+
+shapes.forEach(s=>{
+  const L = LAYER[s.layer];
+  const [x1,y1,x2,y2] = s.r;
+  let col = new THREE.Color(L.color);
+  if (s.ch) col = col.clone().multiplyScalar(0.62);
+  const mat = new THREE.MeshStandardMaterial({
+    color:col, roughness: L.metal ? 0.4 : 0.7, metalness: L.metal ? 0.3 : 0.02
+  });
+  const mesh = new THREE.Mesh(unitBox, mat);
+  mesh.scale.set((x2-x1)*S, 1, (y2-y1)*S);
+  mesh.position.set(X((x1+x2)/2), 0, Z((y1+y2)/2));
+  const emat = new THREE.LineBasicMaterial({color:0x1D2733, transparent:true, opacity:0.4});
+  const edge = new THREE.LineSegments(unitEdges, emat);
+  mesh.add(edge);
+  scene.add(mesh);
+  const baseOpacity = s.layer==='nwell' ? 0.6 : (s.layer==='m2' ? 0.93 : 1);
+  const rec = Object.assign({}, s, {mesh, mat, emat, baseOpacity, baseColor:col});
+  mesh.userData.rec = rec;
+  recs.push(rec);
+});
+
+// 单元边界虚线
+const bpts = [[97,88],[430,88],[430,378],[97,378],[97,88]].map(([x,y])=>new THREE.Vector3(X(x),0.12,Z(y)));
+const border = new THREE.Line(new THREE.BufferGeometry().setFromPoints(bpts),
+  new THREE.LineDashedMaterial({color:0x1D2733, dashSize:0.6, gapSize:0.4}));
+border.computeLineDistances();
+scene.add(border);
+
+let explode = 0;
+function applyLevels(){
+  const L = levels(explode);
+  recs.forEach(r=>{
+    const [a,b] = r.ext(L);
+    r.mesh.scale.y = Math.max(b-a, 0.001);
+    r.mesh.position.y = (a+b)/2;
+  });
+}
+
+/* ---------- 高亮 ---------- */
+let focus = null;
+const visible = {}; LAYER_ORDER.forEach(k=>visible[k]=true);
+
+function isOn(r){
+  if (!focus) return true;
+  return focus.type==='net' ? r.net===focus.id : r.tx.includes(focus.id);
+}
+function applyFocus(){
+  recs.forEach(r=>{
+    const on = isOn(r);
+    const op = on ? r.baseOpacity : (r.layer==='sub' ? 0.3 : 0.08);
+    r.mat.opacity = op;
+    r.mat.transparent = op < 1;
+    r.mat.depthWrite = op >= 0.5;
+    r.mat.emissive.copy(r.baseColor).multiplyScalar(on && focus ? 0.28 : 0);
+    r.emat.opacity = on ? 0.45 : 0.05;
+    r.mesh.visible = visible[r.layer];
+    r.mat.needsUpdate = true;
+  });
+  labelEls.forEach(l=>{
+    const on = !focus || (focus.type==='net' ? l.net===focus.id : l.tx===focus.id);
+    l.el.classList.toggle('dim', !on);
+  });
+  syncButtons();
+  renderReadout();
+}
+
+/* ---------- 标注 ---------- */
+const labelBox = document.getElementById('labels');
+const labelEls = [];
+function mkLabel(text, cls, px, py, lv, extra){
+  const el = document.createElement('div');
+  el.className = 'lbl ' + cls; el.textContent = text;
+  labelBox.appendChild(el);
+  labelEls.push(Object.assign({el, px, py, lv}, extra));
+}
+const txPos = {PU_L:[170,148],PU_R:[355,148],PD_L:[170,255],PD_R:[355,255],AX_L:[208,340],AX_R:[320,340]};
+TX_ORDER.forEach(k=>mkLabel(TX[k].name,'tx',txPos[k][0],txPos[k][1],L=>L.poly[1]+0.4,{tx:k}));
+mkLabel('VDD','net',80,97,L=>L.m1[1]+0.3,{net:'VDD'});
+mkLabel('GND','net',97,40,L=>L.m2[1]+0.3,{net:'GND'});
+mkLabel('GND','net',430,40,L=>L.m2[1]+0.3,{net:'GND'});
+mkLabel('BL','net',245,40,L=>L.m2[1]+0.3,{net:'BL'});
+mkLabel('BLB','net',282,40,L=>L.m2[1]+0.3,{net:'BLB'});
+mkLabel('WL 多晶硅','net',450,340,L=>L.poly[1]+0.3,{net:'WL'});
+mkLabel('WL 金属搭接','net',450,312,L=>L.m1[1]+0.3,{net:'WL'});
+mkLabel('Q','net',208,200,L=>L.m1[1]+0.3,{net:'Q'});
+mkLabel('QB','net',320,200,L=>L.m1[1]+0.3,{net:'QB'});
+
+let showLabels = true;
+const tmpV = new THREE.Vector3();
+function updateLabels(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const L = levels(explode);
+  labelEls.forEach(l=>{
+    if (!showLabels){ l.el.style.display='none'; return; }
+    tmpV.set(X(l.px), l.lv(L), Z(l.py)).project(camera);
+    if (tmpV.z > 1){ l.el.style.display='none'; return; }
+    l.el.style.display='';
+    l.el.style.left = ((tmpV.x+1)/2*w) + 'px';
+    l.el.style.top  = ((1-tmpV.y)/2*h) + 'px';
+  });
+}
+
+/* ---------- 相机控制 ---------- */
+const st = {theta:0.55, phi:0.92, r:60, tx:0, ty:1.5, tz:0};
+const VIEWS = {
+  iso: {theta:0.55, phi:0.92, r:60, tx:0, ty:1.5, tz:0},
+  top: {theta:0,    phi:0.03, r:54, tx:0, ty:0,   tz:-1},
+  side:{theta:0,    phi:1.42, r:52, tx:0, ty:2,   tz:0}
+};
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let tween = null;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+function placeCamera(){
+  const s = Math.sin(st.phi);
+  camera.position.set(st.tx + st.r*s*Math.sin(st.theta), st.ty + st.r*Math.cos(st.phi), st.tz + st.r*s*Math.cos(st.theta));
+  camera.lookAt(st.tx, st.ty, st.tz);
+}
+function goView(name){
+  const to = VIEWS[name];
+  document.querySelectorAll('#views button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.view===name));
+  const from = Object.assign({}, st);
+  const TAU = Math.PI*2;
+  from.theta = to.theta + ((((from.theta - to.theta + Math.PI) % TAU) + TAU) % TAU) - Math.PI;
+  if (reduceMotion){ Object.assign(st, to); return; }
+  const t0 = performance.now();
+  tween = now=>{
+    let k = Math.min(1, (now-t0)/650); k = 1 - Math.pow(1-k, 3);
+    ['theta','phi','r','tx','ty','tz'].forEach(key=>st[key] = from[key] + (to[key]-from[key])*k);
+    if (k >= 1) tween = null;
+  };
+}
+function clearViewButtons(){
+  document.querySelectorAll('#views button').forEach(b=>b.setAttribute('aria-pressed','false'));
+}
+
+const pointers = new Map();
+let mode = 'rot', last = null, down = null, moved = false, pinch = 0;
+const dist2 = ()=>{ const p=[...pointers.values()]; return Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y); };
+
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+canvas.addEventListener('pointerdown', e=>{
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pointers.size === 2) pinch = dist2();
+  mode = (e.button===2 || e.shiftKey) ? 'pan' : 'rot';
+  last = {x:e.clientX, y:e.clientY}; down = {x:e.clientX, y:e.clientY}; moved = false;
+  tween = null; hideTip();
+});
+canvas.addEventListener('pointermove', e=>{
+  if (!pointers.has(e.pointerId)){ hover(e); return; }
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pointers.size === 2){
+    const d = dist2(); if (pinch) st.r = clamp(st.r*pinch/d, 15, 150);
+    pinch = d; moved = true; clearViewButtons(); return;
+  }
+  const dx = e.clientX-last.x, dy = e.clientY-last.y;
+  last = {x:e.clientX, y:e.clientY};
+  if (Math.abs(e.clientX-down.x) + Math.abs(e.clientY-down.y) > 4){ moved = true; clearViewButtons(); }
+  if (mode === 'rot'){
+    st.theta -= dx*0.006;
+    st.phi = clamp(st.phi - dy*0.006, 0.03, 1.52);
+  } else {
+    const k = st.r*0.0017;
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+    const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+    st.tx += (-dx*right.x + dy*up.x)*k;
+    st.ty += (-dx*right.y + dy*up.y)*k;
+    st.tz += (-dx*right.z + dy*up.z)*k;
+  }
+});
+function endPointer(e){
+  const wasSingle = pointers.size === 1;
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = 0;
+  if (wasSingle && !moved && e.button !== 2) pick(e);
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', e=>{ pointers.delete(e.pointerId); pinch = 0; });
+canvas.addEventListener('pointerleave', hideTip);
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault(); tween = null; clearViewButtons();
+  st.r = clamp(st.r*(1 + e.deltaY*0.001), 15, 150);
+}, {passive:false});
+
+/* ---------- 拾取与提示 ---------- */
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+function hitAt(e){
+  const b = canvas.getBoundingClientRect();
+  ndc.set((e.clientX-b.left)/b.width*2-1, -(e.clientY-b.top)/b.height*2+1);
+  ray.setFromCamera(ndc, camera);
+  const cand = recs.filter(r=>r.mesh.visible && r.mat.opacity > 0.2 && r.layer!=='sub').map(r=>r.mesh);
+  const hits = ray.intersectObjects(cand, false);
+  return hits.length ? hits[0].object.userData.rec : null;
+}
+const tip = document.getElementById('tip');
+function hover(e){
+  const r = hitAt(e);
+  if (!r){ hideTip(); return; }
+  const L = LAYER[r.layer];
+  let title = L.name, sub = '', body = r.desc || L.desc;
+  if (r.ch){
+    const t = TX[r.tx[0]];
+    title = t.name + ' 的沟道';
+    body = '多晶硅栅极正下方的这一小块有源区。栅极电压决定这里导不导通。点击可高亮整个晶体管。';
+  } else if (r.net){ sub = '信号：' + NET[r.net].name; }
+  tip.innerHTML = '<b>'+title+'</b>' + (sub ? '<div class="net">'+sub+'</div>' : '') + '<div>'+body+'</div>';
+  tip.hidden = false;
+  const b = stage.getBoundingClientRect();
+  let x = e.clientX-b.left+14, y = e.clientY-b.top+14;
+  if (x + 270 > b.width) x = e.clientX-b.left-274;
+  if (y + tip.offsetHeight > b.height) y = e.clientY-b.top-tip.offsetHeight-10;
+  tip.style.left = x+'px'; tip.style.top = y+'px';
+}
+function hideTip(){ tip.hidden = true; }
+function pick(e){
+  const r = hitAt(e);
+  if (!r) focus = null;
+  else if (r.ch) focus = {type:'tx', id:r.tx[0]};
+  else if (r.net) focus = (focus && focus.type==='net' && focus.id===r.net) ? null : {type:'net', id:r.net};
+  else focus = null;
+  applyFocus();
+}
+
+/* ---------- 面板 ---------- */
+const layerList = document.getElementById('layerList');
+LAYER_ORDER.forEach((k,i)=>{
+  const li = document.createElement('li');
+  const hex = '#' + LAYER[k].color.toString(16).padStart(6,'0');
+  li.innerHTML = '<label><input type="checkbox" checked data-layer="'+k+'"><span class="sw" style="background:'+hex+'"></span>'+LAYER[k].name+'<span class="order">第 '+(i+1)+' 层</span></label>';
+  layerList.appendChild(li);
+});
+layerList.addEventListener('change', e=>{
+  const k = e.target.dataset.layer; if (!k) return;
+  visible[k] = e.target.checked; applyFocus();
+});
+
+const netBox = document.getElementById('nets');
+Object.keys(NET).forEach(k=>{
+  const b = document.createElement('button');
+  b.textContent = NET[k].name; b.dataset.net = k; b.setAttribute('aria-pressed','false');
+  b.onclick = ()=>{ focus = (focus && focus.type==='net' && focus.id===k) ? null : {type:'net', id:k}; applyFocus(); };
+  netBox.appendChild(b);
+});
+const txBox = document.getElementById('txs');
+TX_ORDER.forEach(k=>{
+  const b = document.createElement('button');
+  b.textContent = TX[k].name; b.dataset.tx = k; b.setAttribute('aria-pressed','false');
+  b.onclick = ()=>{ focus = (focus && focus.type==='tx' && focus.id===k) ? null : {type:'tx', id:k}; applyFocus(); };
+  txBox.appendChild(b);
+});
+function syncButtons(){
+  netBox.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', !!(focus && focus.type==='net' && focus.id===b.dataset.net)));
+  txBox.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', !!(focus && focus.type==='tx' && focus.id===b.dataset.tx)));
+}
+
+const readout = document.getElementById('readout');
+function renderReadout(){
+  if (!focus){
+    readout.innerHTML =
+      '<h2>怎么看这张图</h2>'+
+      '<p>先把层间距拉大，看清一共有几层。</p>'+
+      '<p>再找红色多晶硅压在绿色或橙色有源区上的地方。一共 6 处，就是 6 个晶体管，颜色较深的小块是沟道。</p>'+
+      '<p>最后顺着黑色接触孔和灰色通孔，看每个晶体管接到哪根线。点击任意部件，可以高亮它所在的整个信号。</p>';
+    return;
+  }
+  if (focus.type === 'net'){
+    const n = NET[focus.id];
+    readout.innerHTML = '<h2>'+n.name+'</h2><p>'+n.desc+'</p><p class="hint">再点一次同一个按钮，或点空白处，取消高亮。</p>';
+  } else {
+    const t = TX[focus.id];
+    readout.innerHTML = '<h2>'+t.name+'</h2>'+
+      '<p><span class="k">栅极：</span>多晶硅，接 '+t.gate+'</p>'+
+      '<p><span class="k">一端：</span>接 '+t.a+'</p>'+
+      '<p><span class="k">另一端：</span>接 '+t.b+'</p>'+
+      '<p><span class="k">所在区域：</span>'+t.body+'</p>'+
+      '<p class="hint">多晶硅横穿有源区的那一小块就是沟道，两侧的有源区分别是源极和漏极。</p>';
+  }
+}
+
+document.querySelectorAll('#views button').forEach(b=>b.onclick = ()=>goView(b.dataset.view));
+document.getElementById('showLabels').onchange = e=>{ showLabels = e.target.checked; };
+
+const slider = document.getElementById('explode');
+const sliderOut = document.getElementById('explodeOut');
+function setExplode(v){
+  explode = v; slider.value = v; sliderOut.textContent = Math.round(v*100)+'%';
+  applyLevels();
+}
+let intro = null;
+slider.addEventListener('input', ()=>{ intro = null; setExplode(parseFloat(slider.value)); });
+
+/* ---------- 尺寸与循环 ---------- */
+function resize(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+setExplode(0);
+applyFocus();
+if (!reduceMotion){
+  const t0 = performance.now() + 400;
+  intro = now=>{
+    const k = clamp((now-t0)/1400, 0, 1);
+    setExplode(0.55 * (1 - Math.pow(1-k, 3)));
+    if (k >= 1) intro = null;
+  };
+} else setExplode(0.55);
+
+function loop(now){
+  if (intro) intro(now);
+  if (tween) tween(now);
+  placeCamera();
+  renderer.render(scene, camera);
+  updateLabels();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
