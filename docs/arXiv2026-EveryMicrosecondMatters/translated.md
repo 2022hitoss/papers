@@ -1,0 +1,1810 @@
+# Every ${\mu s}$ Matters: Achieving Near Speed-of-Light Latency in GPU Collectives
+
+Siyuan Shen*
+
+ETH Zürich
+
+Zürich, Switzerland
+
+siyuan.shen@inf.ethz.ch
+
+Anton Korzh
+
+NVIDIA Corporation
+
+Santa Clara, California
+
+akorzh@nvidia.com
+
+John Bachan
+
+NVIDIA Corporation
+
+Santa Clara, California
+
+jbachan@nvidia.com
+
+Tiancheng Chen
+
+ETH Zürich
+
+Zürich, Switzerland
+
+tiancheng.chen@inf.ethz.ch
+
+Arnav Goel
+
+NVIDIA Corporation
+
+Santa Clara, California
+
+arnavg@nvidia.com
+
+Ludwig Schneider
+
+NVIDIA Corporation
+
+Santa Clara, California
+
+Ischneider@nvidia.com
+
+Pouya Kousha
+
+NVIDIA Corporation
+
+Santa Clara, California
+
+pkousha@nvidia.com
+
+Zhenhao He
+
+NVIDIA Corporation
+
+Zürich, Switzerland
+
+zhenhaoh@nvidia.com
+
+Sylvain Jeaugey
+
+NVIDIA Corporation
+
+Grenoble, France
+
+sjeaugey@nvidia.com
+
+Kamil Iskra
+
+NVIDIA Corporation
+
+Chicago, Illinois
+
+kiskra@nvidia.com
+
+Nishank Chandawala
+
+NVIDIA Corporation
+
+Santa Clara, California
+
+nchandawala@nvidia.com
+
+Jeff R. Hammond
+
+NVIDIA Helsinki Oy
+
+Helsinki, Finland
+
+jeffpapers@nvidia.com
+
+Torsten Hoefler
+
+ETH Zürich
+
+Zürich, Switzerland
+
+torsten.hoefler@inf.ethz.ch
+
+Abstract-GPU collective communication is typically optimized for bandwidth, yet many emerging workloads are increasingly limited by latency. Long-context decode-heavy large language model (LLM) inference is a prime example, where serving large models requires multiple GPUs, and many small collectives lie directly on the critical path of token generation. Therefore, even ${\mu s}$ of overhead can impact performance and cost. In this work, we study how to approach the hardware Speed-of-Light (SoL) lower bound for GPU collectives within a scale-up network. We identify key principles for near-optimal designs, including barrier-free synchronization and efficient use of symmetric memory and multicast. Building on NCCL's device-side API, we develop low-latency interfaces for constructing custom collective kernels and use them to implement new symmetric collectives in NCCL. Microbenchmarks show substantial latency reductions for small and medium messages, reducing overhead to within 7% of the absolute SoL lower bound. When integrated into real applications, these kernels improve inter-token latency and throughput in LLM inference and accelerate cuSOLVERMp, demonstrating benefits for both AI inference and traditional HPC workloads.
+
+> 
+摘要——GPU 集合通信 (collective communication) 通常针对带宽 (bandwidth) 进行优化，但许多新兴工作负载正日益受限于延迟 (latency)。长上下文、解码密集型大语言模型 (LLM) 推理就是一个典型例子：服务大模型需要多个 GPU，而许多小型集合通信操作 (collectives) 直接位于 token 生成的关键路径上。因此，即使 ${\mu s}$ 级的开销也会影响性能和成本。在这项工作中，我们研究如何在扩展网络 (scale-up network) 内逼近 GPU 集合通信 (GPU collectives) 的硬件光速 (Speed-of-Light, SoL) 下界。我们确定了近最优设计的关键原则，包括无屏障同步 (barrier-free synchronization) 以及高效使用对称内存 (symmetric memory) 和多播 (multicast)。基于 NCCL 的设备端 API (device-side API)，我们开发了用于构建自定义集合通信内核 (collective kernels) 的低延迟接口，并利用它们在 NCCL 中实现新的对称集合通信 (symmetric collectives)。微基准测试 (Microbenchmarks) 显示，对于中小型消息，延迟显著降低，将开销降至绝对 SoL 下界的 7% 以内。当集成到实际应用中时，这些内核改善了 LLM 推理中的 token 间延迟 (inter-token latency) 和吞吐量 (throughput)，并加速了 cuSOLVERMp，展示了其对 AI 推理和传统高性能计算 (HPC) 工作负载的益处。
+
+
+
+
+## I. INTRODUCTION
+
+Deep learning has driven rapid growth in GPU cluster scale and interconnect capability. As large language models (LLMs) scale, inference increasingly spans multiple GPUs, bringing collective communication onto the critical path of token generation. For example, serving DeepSeek-V3-class models [1] requires at least $8 \times  \mathrm{H}{200}$ GPUs [2]. The impact of collective communication is especially evident in decode-heavy workloads, where modern systems may generate millions of tokens per request in applications such as code generation and agent-style workflows [3], [4]. In these settings, even small communication overheads accumulate and directly impact the quality of service. In addition, for long-context inference, the KV-cache memory grows with sequence length, and the batch size is often reduced to fit within device memory. As a result, collectives such as AllReduce are invoked frequently with relatively small message sizes during decoding, making latency, rather than bandwidth, the dominant bottleneck. Consequently, recent inference frameworks such as vLLM [3], SGLang [5], and TensorRT-LLM [6] treat communication latency as a first-class optimization target and implement custom low-latency GPU kernels for operations such as AllReduce.
+
+> 
+深度学习推动了 GPU 集群规模与互连能力的快速增长。随着大语言模型 (LLMs) 规模扩展，推理日益跨多个 GPU 进行，使集合通信 (collective communication) 进入令牌生成 (token generation) 的关键路径。例如，为 DeepSeek-V3 级模型 [1] 提供服务至少需要 $8 \times  \mathrm{H}{200}$ 块 GPU [2]。集合通信的影响在解码密集型 (decode-heavy) 工作负载中尤为明显：在这些场景中，现代系统在代码生成和智能体式工作流等应用 [3], [4] 中，每个请求可能生成数百万个令牌。在此类设置下，即便很小的通信开销也会累积，并直接影响服务质量 (quality of service)。此外，对于长上下文推理 (long-context inference)，KV 缓存 (KV-cache) 内存随序列长度 (sequence length) 增长，而批大小 (batch size) 通常会被降低以适配设备内存 (device memory)。因此，在解码 (decoding) 期间，诸如 AllReduce 之类的集合通信操作 (collectives) 会以相对较小的消息大小 (message size) 被频繁调用，使延迟 (latency) 而非带宽 (bandwidth) 成为主要瓶颈 (dominant bottleneck)。因此，近期推理框架 (inference frameworks) 如 vLLM [3]、SGLang [5] 和 TensorRT-LLM [6] 将通信延迟 (communication latency) 视为首要优化目标 (first-class optimization target)，并为诸如 AllReduce 之类的操作 (operations) 实现定制低延迟 GPU 内核 (low-latency GPU kernels)。
+
+
+
+
+![Fig. 1: In long-context, small-batch tensor-parallel (TP) LLM inference, many small AllReduce operations lie on the critical path, making collective latency a crucial bottleneck. The microbenchmark shows that our NCCL low-latency kernel reduces small-message AllReduce latency relative to other implementations, approaching the speed-of-light (SoL) bound. This translates into lower inter-token latency (ITL) and higher cost savings for Llama-3.1-70B inference.](images/fig01.jpg)
+
+Fig. 1: In long-context, small-batch tensor-parallel (TP) LLM inference, many small AllReduce operations lie on the critical path, making collective latency a crucial bottleneck. The microbenchmark shows that our NCCL low-latency kernel reduces small-message AllReduce latency relative to other implementations, approaching the speed-of-light (SoL) bound. This translates into lower inter-token latency (ITL) and higher cost savings for Llama-3.1-70B inference.
+
+> 
+图 1：在长上下文、小批量的张量并行 (TP) LLM 推理中，许多小规模 AllReduce 操作位于关键路径上，使得集合通信延迟成为关键瓶颈。微基准测试表明，与其他实现相比，我们的 NCCL 低延迟内核降低了小消息 AllReduce 延迟，逼近光速 (SoL) 下界。这转化为更低的令牌间延迟 (ITL) 以及 Llama-3.1-70B 推理更高的成本节省。
+
+
+
+
+---
+
+*The majority of this work was done during an internship at NVIDIA.
+
+> 
+*本工作的大部分内容是在NVIDIA实习期间完成的。*
+
+
+
+
+---
+
+Low-latency collectives are essential not only for LLM inference, but also for many traditional scientific and HPC applications. Many simulations and solvers perform frequent small global reductions within tightly synchronized phases, such as time-stepping loops and particle simulations. In these settings, collective latency lies on the critical path and can limit strong scaling. Prior work such as LLAMP shows that widely used HPC workloads, including MILC and LULESH, are measurably sensitive to collective latency [7]. At the same time, many GPU-accelerated scientific applications do not yet fully exploit GPU-native communication libraries. These observations indicate that low-latency GPU collectives can improve not only LLM inference, but also scalability and time-to-solution in traditional scientific workloads.
+
+> 
+低延迟集合通信 (low-latency collectives) 不仅对 LLM 推理 (LLM inference) 至关重要，而且对许多传统科学应用 (traditional scientific applications) 和 HPC 应用 (HPC applications) 也必不可少。许多模拟 (simulations) 和求解器 (solvers) 会在紧密同步的阶段内执行频繁的小规模全局归约 (global reductions)，例如时间步进循环 (time-stepping loops) 和粒子模拟 (particle simulations)。在这些场景中，集合通信延迟 (collective latency) 位于关键路径 (critical path) 上，并可能限制强扩展 (strong scaling)。LLAMP 等先前工作 (prior work) 表明，包括 MILC 和 LULESH 在内的广泛使用的 HPC 工作负载 (HPC workloads) 对集合通信延迟 (collective latency) 具有可测量的敏感性 [7]。与此同时，许多 GPU 加速的科学应用 (GPU-accelerated scientific applications) 尚未充分利用 GPU 原生通信库 (GPU-native communication libraries)。这些观察表明，低延迟 GPU 集合通信 (low-latency GPU collectives) 不仅能改善 LLM 推理 (LLM inference)，还能改善传统科学工作负载 (traditional scientific workloads) 的可扩展性 (scalability) 和求解时间 (time-to-solution)。
+
+
+
+
+Despite this growing recognition, existing approaches still leave performance on the table. We observed that even the best available implementations often remain above the "speed-of-light" (SoL) bound, by which we mean the absolute hardware lower bound imposed by the interconnect and memory system. Figure 1 illustrates this effect for the long-context, small-batch decode setting that we target. On 4 GB200 GPUs, the NCCL low-latency kernel we introduce in this work reduces average latency for small messages from 11.0 $\mu \mathrm{s}$ for NCCL ring to ${2.37\mu }\mathrm{s}$ , yielding an ${8.7}\%$ ITL reduction for the inference workload of Llama-3.1-70B. Using CoreWeave's on-demand price of \$42/hour for 4 GB200 [8] and converting output throughput into cost per $1\mathrm{M}$ output tokens, the measured data implies that each ${\mu s}$ removed from AllReduce latency reduces cost by about 0.9%. While this saving may appear insignificant, it compounds into substantial cost reduction at the trillion-token scale of modern LLM services [4], [9].
+
+> 
+尽管这种认识日益增强，现有方法仍未能充分释放性能。我们观察到，即使是最佳可用实现，也常常高于“光速” (speed-of-light, SoL) 界限；我们所说的界限是指由互连 (interconnect) 和内存系统 (memory system) 施加的绝对硬件下界。图 1 展示了我们所针对的长上下文 (long-context)、小批量解码 (small-batch decode) 设置下的这一效应。在 4 个 GB200 GPU 上，本工作引入的 NCCL 低延迟内核 (low-latency kernel) 将小消息 (small messages) 的平均延迟 (average latency) 从 NCCL ring 的 11.0 $\mu \mathrm{s}$ 降低至 ${2.37\mu }\mathrm{s}$，在 Llama-3.1-70B 的推理工作负载 (inference workload) 中实现了 ${8.7}\%$ 的令牌间延迟 (Inter-Token Latency, ITL) 降低。使用 CoreWeave 对 4 个 GB200 的按需价格 (on-demand price) \$42/小时 [8]，并将输出吞吐量 (output throughput) 转换为每 $1\mathrm{M}$ 个输出词元 (output tokens) 的成本，测量数据表明，从 AllReduce 延迟中移除的每 ${\mu s}$，都会使成本降低约 0.9%。尽管这种节省可能看似微不足道，但在现代 LLM 服务的万亿词元 (trillion-token) 规模下，它会累积成可观的成本降低 [4], [9]。
+
+
+
+
+In this work, we begin by identifying global memory barriers across participating GPUs as a key source of latency in existing collective implementations. To this end, we present several techniques, including LL, sentinel-based synchronization, double buffering, and a novel two-shot AllReduce algorithm. By combining these techniques, we eliminate expensive global memory barriers entirely while preserving correctness and efficiency. Building on these, we develop a set of experimental application programming interfaces (APIs) on top of NCCL's latest device communication APIs that encapsulate these low-latency mechanisms into reusable primitives for efficiently prototyping custom low-latency kernels. Leveraging this interface, we implement several new AllReduce kernels within NCCL that are directly usable in practice.
+
+> 
+在本工作中，我们首先将跨参与 GPU 的全局内存屏障 (global memory barriers) 确定为现有集合通信实现中延迟 (latency) 的一个关键来源。为此，我们提出了若干技术，包括低延迟协议 (LL, Low Latency)、基于哨兵 (sentinel) 的同步、双缓冲 (double buffering)，以及一种新颖的两阶段 (two-shot) AllReduce 算法。通过结合这些技术，我们在保持正确性与效率的同时，完全消除了昂贵的全局内存屏障。在此基础上，我们在 NCCL 最新的设备通信 API (device communication APIs) 之上开发了一组实验性应用程序编程接口 (application programming interfaces, APIs)，其将这些低延迟机制封装为可复用原语 (reusable primitives)，以便高效地原型化自定义低延迟内核 (kernel)。借助该接口，我们在 NCCL 内实现了若干新的 AllReduce 内核，这些内核可直接在实践中使用。
+
+
+
+
+To evaluate these techniques and the resulting collectives, we conduct detailed microbenchmarks showing that our designs approach the hardware SoL latency bound across a wide range of node configurations. We also integrate our low-latency kernels into real workloads, including vLLM and cuSOLVERMp. These case studies demonstrate consistent and measurable performance improvements over standard NCCL collectives and other state-of-the-art frameworks, confirming the practical benefits of latency-centric collective optimization for both LLM inference and traditional HPC workloads.
+
+> 
+为了评估这些技术以及由此产生的集合通信 (collective communication)，我们进行了详细的微基准测试 (microbenchmark)，表明我们的设计在广泛的节点配置 (node configuration) 范围内都能接近硬件速度极限 (speed-of-light, SoL) 延迟下界。我们还将低延迟内核 (low-latency kernel) 集成到真实工作负载 (real workload) 中，包括 vLLM 和 cuSOLVERMp。这些案例研究 (case study) 表明，相较于标准 NCCL 集合通信 (NCCL collective) 和其他最先进框架 (state-of-the-art framework)，其带来了持续且可测量的性能提升，证实了以延迟为中心的集合通信优化 (latency-centric collective optimization) 对 LLM 推理 (LLM inference) 和传统 HPC 工作负载 (HPC workload) 都具有实际收益。
+
+
+
+
+![Fig. 2: Overview of device-initiated communication and symmetric memory in NCCL [19]. When GPUs are in the same node or NVLink domain, LSA operations are supported over PCIe and NVLink, while multimem operations are enabled via NVLink SHARP for hardware-accelerated multicast and reduction. For inter-node communication, GPU-initiated networking (GIN) supports GDAKI and proxy-assisted data transfers over InfiniBand and RoCE [20].](images/fig02.jpg)
+
+Fig. 2: Overview of device-initiated communication and symmetric memory in NCCL [19]. When GPUs are in the same node or NVLink domain, LSA operations are supported over PCIe and NVLink, while multimem operations are enabled via NVLink SHARP for hardware-accelerated multicast and reduction. For inter-node communication, GPU-initiated networking (GIN) supports GDAKI and proxy-assisted data transfers over InfiniBand and RoCE [20].
+
+> 
+图 2：NCCL [19] 中设备发起的通信 (device-initiated communication) 与对称内存 (symmetric memory) 概览。当 GPU 位于同一节点或 NVLink 域 (NVLink domain) 内时，LSA 操作 (LSA operations) 可通过 PCIe 和 NVLink 支持，而多播内存操作 (multimem operations) 则通过 NVLink SHARP 启用，用于硬件加速的多播 (multicast) 和归约 (reduction)。对于节点间通信 (inter-node communication)，GPU 发起的网络通信 (GPU-initiated networking, GIN) 支持通过 InfiniBand 和 RoCE 进行 GDAKI 和代理辅助的数据传输 (proxy-assisted data transfers) [20]。
+
+
+
+
+Our contributions in this work are as follows:
+
+> 
+本文的贡献如下：
+
+
+
+
+- We systematically analyze existing techniques for reducing collective latency, characterize where they are effective, and compose them into barrier-free designs that approach the hardware lower bound.
+
+> 
+- 我们系统性地分析用于降低集合通信延迟 (collective latency) 的现有技术，刻画它们在何处有效，并将它们组合成接近硬件下界 (hardware lower bound) 的无屏障设计 (barrier-free designs)。
+
+
+
+
+- We design and implement a set of low-latency communication APIs on top of NCCL's device-side APIs to facilitate development of custom collective kernels.
+
+> 
+- 我们在 NCCL 的设备端 API (device-side API) 之上设计并实现了一套低延迟通信 API (low-latency communication APIs)，以促进自定义集合通信内核 (custom collective kernels) 的开发。
+
+
+
+
+- We develop new low-latency AllReduce algorithms, including a novel two-shot LL128 atomic design, using the proposed low-latency APIs.
+
+> 
+- 我们使用所提出的低延迟 (low-latency) API，开发了新的低延迟 (low-latency) 全归约 (AllReduce) 算法，其中包括一种新颖的两次式 (two-shot) LL128 原子 (atomic) 设计。
+
+
+
+
+- We conduct extensive evaluations through microbenchmarks and real workloads, including vLLM inference and cu-SOLVERMp, demonstrating noticeable performance gains.
+
+> 
+- 我们通过微基准测试 (microbenchmarks) 和真实工作负载 (real workloads) 开展了广泛评估，包括 vLLM 推理 (vLLM inference) 和 cu-SOLVERMp，展示了显著的性能提升 (performance gains)。
+
+
+
+
+## II. BACKGROUND
+
+### A.GPU Communication Libraries
+
+Efficient communication is essential in modern GPU-accelerated systems, where both AI and scientific workloads rely on tightly coupled GPU execution [10]. To support this, specialized GPU communication libraries have emerged as a critical software layer. NCCL is one of the most widely used libraries, providing collective and point-to-point operations optimized for various interconnects [11]. While NCCL primarily targets optimized collectives, NVSHMEM adopts a partitioned global address space (PGAS) model that enables one-sided communication and exposes finer device-side control [12]. Similar libraries exist across vendors, including AMD's RCCL and rocSHMEM, and Intel's oneCCL [13]-[15]. In contrast, traditional frameworks like MPI [16], originally designed for CPU-based systems, have been extended to support GPUs (e.g., CUDA-aware MPI [17]), but often underperform vendor-optimized libraries for large-scale collectives while remaining competitive for point-to-point communication [18]. These observations highlight that GPU-native communication libraries have become an essential complement to traditional frameworks in modern HPC and AI systems.
+
+> 
+高效通信在现代图形处理器 (GPU) 加速系统中至关重要，其中人工智能 (AI) 和科学工作负载都依赖于紧密耦合的图形处理器 (GPU) 执行 [10]。为了支持这一点，专用的图形处理器 (GPU) 通信库已作为关键软件层出现。NCCL 是使用最广泛的库之一，为各种互连 (interconnect) 提供优化的集合通信 (collective communication) 和点对点 (point-to-point) 操作 [11]。虽然 NCCL 主要针对优化的集合通信 (collective communication)，但 NVSHMEM 采用分区全局地址空间 (PGAS) 模型，支持单边通信 (one-sided communication) 并暴露更细粒度的设备端控制 (device-side control) [12]。各厂商都有类似的库，包括 AMD 的 RCCL 和 rocSHMEM，以及 Intel 的 oneCCL [13]-[15]。相比之下，像消息传递接口 (MPI) [16] 这样的传统框架最初是为基于中央处理器 (CPU) 的系统设计的，现已扩展支持图形处理器 (GPU)（例如，支持 CUDA 的 MPI (CUDA-aware MPI) [17]），但在大规模集合通信 (large-scale collectives) 中通常不如厂商优化的库，而在点对点通信 (point-to-point communication) 中仍具有竞争力 [18]。这些观察表明，图形处理器 (GPU) 原生通信库已成为现代高性能计算 (HPC) 和人工智能 (AI) 系统中传统框架的重要补充。
+
+
+
+
+## B. Device-Initiated Communication and Symmetric Memory
+
+In addition to optimized collective primitives, modern CCLs increasingly support device-driven communication, enabling kernels to directly initiate and orchestrate data movement. Early support for this appeared in NVSHMEM, which allows kernels to perform remote memory operations (e.g., put/get) and synchronization without host involvement. More recently, NCCL 2.28 introduces device-side communication APIs that enable kernels to directly invoke communication primitives [20], [21]. These capabilities are enabled by underlying hardware and runtime support, including GPU Virtual Memory Management (VMM), which provides a unified virtual address space across GPUs, and GPUDirect Async Kernel-Initiated (GDAKI), which allows GPUs to directly interact with network interfaces without CPU intervention.
+
+> 
+除了优化后的集合通信原语 (collective primitives) 之外，现代集合通信库 (CCL) 越来越多地支持设备驱动的通信 (device-driven communication)，使内核 (kernel) 能够直接发起并编排数据移动。对此的早期支持出现在 NVSHMEM 中，它允许内核执行远程内存操作 (remote memory operations)（例如 put/get）和同步 (synchronization)，而无需主机参与。最近，NCCL 2.28 引入了设备端通信 API (device-side communication APIs)，使内核能够直接调用通信原语 (communication primitives) [20], [21]。这些能力由底层硬件和运行时支持 (runtime support) 提供，包括 GPU 虚拟内存管理 (GPU Virtual Memory Management, VMM)，它跨 GPU 提供统一的虚拟地址空间，以及 GPUDirect 异步内核发起 (GPUDirect Async Kernel-Initiated, GDAKI)，它允许 GPU 在没有 CPU 干预的情况下直接与网络接口 (network interfaces) 交互。
+
+
+
+
+Symmetric memory originates from the SHMEM family of PGAS models. Remotely accessible data objects, called symmetric objects, have identical type, size, and layout on each processing element (PE), which corresponds to a GPU in this case. This allows remote access using the same logical address together with a PE identifier. These objects reside in the symmetric heap, which supports one-sided operations such as get, put, and atomics.
+
+> 
+对称内存 (symmetric memory) 起源于 SHMEM 系列的 PGAS 模型。可远程访问的数据对象称为对称对象 (symmetric objects)，它们在每个处理单元 (PE) 上具有相同的类型、大小和布局；在此情况下，PE 对应于 GPU。这允许使用相同的逻辑地址以及 PE 标识符进行远程访问。这些对象驻留在对称堆 (symmetric heap) 中，该堆支持诸如 get、put 和原子操作 (atomics) 之类的单边操作 (one-sided operations)。
+
+
+
+
+On GPUs connected through PCIe or NVLink and supported by CUDA Virtual Memory Management (VMM), symmetric memory regions can be mapped into a unified virtual address space, making them load/store accessible (LSA). On systems with NVSwitch and NVLink SHARP (NVLS), multimem load/store instructions can further accelerate communication by enabling multicast and in-network reduction. A visualization is shown in Fig. 2. Overall, symmetric memory reduces address translation overhead and enables low-latency data exchange. Thus, NCCL is gradually replacing its collectives with symmetric-memory-based kernels, and previous implementations are now referred to as legacy kernels [19], [22].
+
+> 
+在通过 PCIe 或 NVLink 连接、且受 CUDA 虚拟内存管理 (Virtual Memory Management, VMM) 支持的 GPU 上，对称内存 (symmetric memory) 区域可被映射到统一的虚拟地址空间 (unified virtual address space) 中，使其可进行加载/存储访问 (load/store accessible, LSA)。在配备 NVSwitch 和 NVLink SHARP (NVLS) 的系统中，多播内存 (multimem) 加载/存储指令可通过启用多播 (multicast) 和网络内归约 (in-network reduction) 进一步加速通信。可视化 (visualization) 如图 2 所示。总体而言，对称内存 (symmetric memory) 减少了地址转换开销 (address translation overhead)，并实现了低延迟数据交换 (low-latency data exchange)。因此，NCCL 正逐渐用基于对称内存 (symmetric memory) 的内核 (kernels) 替换其集合通信操作 (collectives)，而先前的实现现在被称为遗留内核 (legacy kernels) [19], [22]。
+
+
+
+
+We base our implementation on NVIDIA hardware and NCCL because this stack represents one of the most widely adopted platforms for GPU collectives in modern AI and HPC ecosystems [23], [24]. We chose NCCL rather than NVSHMEM since NCCL is extensively used as a communication backend across both deep learning frameworks and other scientific libraries, including PyTorch [25], TensorFlow [26], vLLM [3], cuSOLVERMp [27], and cuBLASMp [28]. This level of integration makes NCCL a more suitable choice.
+
+> 
+我们将实现建立在 NVIDIA 硬件与 NCCL 之上，因为这一技术栈是现代人工智能 (AI) 和高性能计算 (HPC) 生态系统中采用最广泛的 GPU 集合通信 (GPU collectives) 平台之一 [23], [24]。我们选择 NCCL 而非 NVSHMEM，是因为 NCCL 被广泛用作深度学习框架 (deep learning frameworks) 与其他科学计算库 (scientific libraries) 的通信后端 (communication backend)，包括 PyTorch [25]、TensorFlow [26]、vLLM [3]、cuSOLVERMp [27] 和 cuBLASMp [28]。这种集成程度使 NCCL 成为更合适的选择。
+
+
+
+
+Most of the design principles are, nevertheless, not NVIDIA-specific. LL, sentinel synchronization, and double buffering require GPU-initiated access to peer memory, remote writes that become visible to GPU-side polling, and device-side ordering or fence operations before buffer reuse. All platforms providing these properties can implement the proposed protocols and kernels.
+
+> 
+尽管如此，大多数设计原则并非 NVIDIA 特有。LL、哨兵同步 (sentinel synchronization) 和双缓冲 (double buffering) 需要 GPU 发起的对等内存 (peer memory) 访问、可对 GPU 侧轮询 (GPU-side polling) 可见的远程写 (remote writes)，以及在缓冲区复用 (buffer reuse) 前进行设备侧排序或栅栏操作 (device-side ordering or fence operations)。所有提供这些特性的平台都能实现所提出的协议 (protocols) 和内核 (kernels)。
+
+
+
+
+Additionally, this work focuses on collectives within a scaleup network, specifically GPUs residing in the same NVLink domain. We exclude scale-out communication for several reasons. First, in modern LLM inference, which is a primary target of this work, parallel groups are typically confined to a single scale-up domain. Second, multi-node systems commonly employ hierarchical collectives that separate local and scale-out phases, making improvements within the scaleup domain complementary to higher-level optimizations [29], [30]. Finally, emerging GPU systems increasingly expand the size and capability of these domains, allowing a growing fraction of latency-sensitive workloads to execute entirely within a single scale-up network [31], [32].
+
+> 
+此外，本工作关注纵向扩展网络 (scale-up network) 内的集合通信 (collectives)，具体是位于同一 NVLink 域 (NVLink domain) 中的 GPU。我们出于若干原因排除了横向扩展通信 (scale-out communication)。首先，在现代 LLM 推理 (LLM inference) 中——这是本工作的主要目标——并行组 (parallel groups) 通常被限制在单个纵向扩展域 (scale-up domain) 内。其次，多节点系统通常采用分层集合通信 (hierarchical collectives)，将本地阶段与横向扩展阶段分离，从而使纵向扩展域内的改进与更高层优化 [29], [30] 互补。最后，新兴 GPU 系统日益扩大这些域的规模与能力，使越来越大比例的延迟敏感型工作负载 (latency-sensitive workloads) 能够完全在单个纵向扩展网络 (scale-up network) 内执行 [31], [32]。
+
+
+
+
+![Fig. 3: Barrier latency on GB200 as a function of the number of GPUs for unicast and multicast implementations.](images/fig03.jpg)
+
+Fig. 3: Barrier latency on GB200 as a function of the number of GPUs for unicast and multicast implementations.
+
+> 
+图 3：在 GB200 上，单播 (unicast) 和多播 (multicast) 实现的屏障延迟 (barrier latency) 随 GPU 数量的变化。
+
+
+
+
+## III. TOWARD NEAR SPEED-OF-LIGHT ALLREDUCE
+
+In this section, we describe how we approach near speed-of-light (SoL) latency, i.e., the hardware lower bound, for AllReduce (R is capitalized following NCCL's notation). We focus on AllReduce because it is one of the most widely used collectives in HPC and distributed machine learning and a frequent optimization target in practice [33]-[38]. Moreover, many implementations decompose AllReduce into ReduceScatter and AllGather or Reduce and Broadcast, so techniques that minimize AllReduce latency often apply directly to these building blocks. Thus, optimizing AllReduce benefits a broader class of collectives.
+
+> 
+在本节中，我们描述如何使全归约 (AllReduce) 逼近近乎光速 (speed-of-light, SoL) 的延迟，即硬件下界（其中 R 按照 NCCL 的记法大写）。我们重点关注全归约 (AllReduce)，因为它是高性能计算 (HPC) 和分布式机器学习 (distributed machine learning) 中最广泛使用的集合通信操作 (collective) 之一，并且在实践中也是常见的优化目标 [33]-[38]。此外，许多实现会将全归约 (AllReduce) 分解为归约散射 (ReduceScatter) 和全收集 (AllGather)，或归约 (Reduce) 和广播 (Broadcast)，因此最小化全归约 (AllReduce) 延迟的技术通常可直接应用于这些基本构件 (building blocks)。因此，优化全归约 (AllReduce) 会使更广泛的一类集合通信操作 (collectives) 受益。
+
+
+
+
+## A. Low-Latency AllReduce Algorithms
+
+When the message size of an AllReduce operation is small, its latency is primarily determined by the number of synchronizations needed, or communication phases. Consequently, algorithms such as tree-based or recursive-doubling AllReduce, which require $O\left( {\log N}\right)$ rounds of synchronization for $N$ ranks, typically outperform ring-based algorithms that require $O\left( N\right)$ rounds for small messages [11],[39]. In a scale-up network, the number of synchronizations can be reduced further to $O\left( 1\right)$ using one-shot or two-shot AllReduce algorithms, which are widely adopted in most communication libraries and frameworks [3], [6], [11], [12], [30].
+
+> 
+当全归约 (AllReduce) 操作的消息大小 (message size) 很小时，其延迟 (latency) 主要取决于所需的同步 (synchronization) 次数，或通信阶段 (communication phase) 的数量。因此，诸如基于树 (tree-based) 或递归倍增 (recursive-doubling) 的 AllReduce 等算法，对于 $N$ 个 rank 需要 $O\left( {\log N}\right)$ 轮同步，通常在小消息 (small message) 下优于需要 $O\left( N\right)$ 轮的基于环 (ring-based) 的算法 [11],[39]。在纵向扩展网络 (scale-up network) 中，使用单次 (one-shot) 或两次 (two-shot) AllReduce 算法可以进一步将同步次数减少到 $O\left( 1\right)$，这些算法已被大多数通信库 (communication library) 和框架 (framework) 广泛采用 [3], [6], [11], [12], [30]。
+
+
+
+
+1) One-shot AllReduce: In a one-shot AllReduce, the entire reduction is completed in a single communication phase, where each GPU fetches data from all peers, performs the reduction locally, and writes the result to the output. In pull mode, GPUs read remote data via loads, while in push mode they write data to remote buffers before reducing locally. Push is generally faster, requiring only half a GPU-to-GPU RTT versus a full RTT for remote loads, but needs additional buffering for incoming data. Consequently, push-based one-shot designs are often preferred for latency-sensitive collectives.
+
+> 
+1) 一次性全归约 (one-shot AllReduce)：在一次性全归约中，整个归约 (reduction) 在单个通信阶段 (communication phase) 完成，其中每个 GPU 从所有对等方 (peer) 获取数据，在本地执行归约，并将结果写入输出。在拉取模式 (pull mode) 下，GPU 通过加载 (load) 读取远程数据；而在推送模式 (push mode) 下，GPU 先将数据写入远程缓冲区 (remote buffer)，再在本地进行归约。推送 (push) 通常更快，因为与远程加载 (remote load) 需要完整往返时间 (RTT) 相比，它只需要一半的 GPU 到 GPU 往返时间 (RTT)，但需要为传入数据 (incoming data) 提供额外缓冲 (buffering)。因此，基于推送 (push-based) 的一次性全归约设计通常更适合延迟敏感的集合通信 (collective communication)。
+
+
+
+
+2) Two-shot AllReduce: A two-shot AllReduce is decomposed into two phases. In the ReduceScatter phase, each GPU exchanges partitions of its input with peers and performs the reduction on its assigned chunk, producing a partial result. Either push or pull semantics may be used in this phase. In the AllGather phase, the reduced chunks are exchanged so that every GPU has the complete result. Compared to one-shot, two-shot introduces an additional synchronization but significantly reduces the communication volume, improving performance for moderate message sizes. For $N$ ranks reducing $M$ bytes of data, one-shot incurs $O\left( {N \cdot  M}\right)$ total communication volume, whereas two-shot reduces this to $O\left( M\right)$ .
+
+> 
+2) 两次式 AllReduce (Two-shot AllReduce)：两次式 AllReduce (Two-shot AllReduce) 被分解为两个阶段。在 ReduceScatter 阶段，每个 GPU 与其对等端 (peer) 交换输入的分区 (partition)，并在其分配到的数据块 (chunk) 上执行归约 (reduction)，从而产生部分结果 (partial result)。该阶段可使用推 (push) 或拉 (pull) 语义。在 AllGather 阶段，交换已归约的数据块 (chunk)，使每个 GPU 都拥有完整结果。与一次性 (one-shot) 相比，两次式 (two-shot) 引入了额外的同步 (synchronization)，但显著减少了通信量 (communication volume)，从而改善中等消息大小 (moderate message size) 下的性能。对于 $N$ 个 rank 归约 $M$ 字节数据，一次性 (one-shot) 会产生 $O\left( {N \cdot  M}\right)$ 的总通信量，而两次式 (two-shot) 将其降低至 $O\left( M\right)$。
+
+
+
+
+![Fig. 4: Example illustrating bidirectional communication with double buffering. Two ranks exchange chunked inputs, where chunk $i$ from rank $r$ is denoted ${C}_{r}^{i}$ . The scratch space is divided into Buffers 0 and 1, each can store two chunks. The black border marks the active buffer. Steps (1), (2), and (3) show events in chronological order, with time progressing to the right. Arrows represent cross-GPU data transfer. The mechanism is independent of whether LL or sentinel synchronization is used.](images/fig04.jpg)
+
+Fig. 4: Example illustrating bidirectional communication with double buffering. Two ranks exchange chunked inputs, where chunk $i$ from rank $r$ is denoted ${C}_{r}^{i}$ . The scratch space is divided into Buffers 0 and 1, each can store two chunks. The black border marks the active buffer. Steps (1), (2), and (3) show events in chronological order, with time progressing to the right. Arrows represent cross-GPU data transfer. The mechanism is independent of whether LL or sentinel synchronization is used.
+
+> 
+图 4：示例说明采用双缓冲 (double buffering) 的双向通信 (bidirectional communication)。两个 rank 交换分块输入 (chunked inputs)，其中来自 rank $r$ 的第 $i$ 个块 (chunk) 记为 ${C}_{r}^{i}$。暂存空间 (scratch space) 被划分为缓冲区 0 和 1 (Buffers 0 and 1)，每个缓冲区可存储两个块。黑色边框标记活动缓冲区 (active buffer)。步骤 (1)、(2) 和 (3) 按时间顺序展示事件，时间向右推进。箭头表示跨 GPU 数据传输 (cross-GPU data transfer)。该机制与使用 LL 还是哨兵同步 (sentinel synchronization) 无关。
+
+
+
+
+## B. Cost of Memory Barriers
+
+After examining several one-shot and two-shot AllRe-duce implementations in state-of-the-art frameworks and libraries [3], [6], [12], [30], we observe that, regardless of push or pull communication, these designs typically rely on explicit memory barriers to synchronize peers and signal data readiness at the thread-block level. Using NCCL's ncclLsaBarrierSession, which implements a memory barrier for load-store accessible (LSA) devices, we measure the overhead of such synchronization under relaxed memory ordering and report the results in Fig. 3. Although NCCL's implementation may not be fully optimized, alternative designs follow the same fundamental pattern: a flag is propagated to all peers, and each GPU waits until it observes the corresponding signals from every other participant. Therefore, it is representative of the inherent cost in such approaches.
+
+> 
+在考察了当前最先进框架和库 [3], [6], [12], [30] 中的若干单次 (one-shot) 与两次 (two-shot) AllReduce 实现之后，我们观察到，无论采用推送 (push) 还是拉取 (pull) 通信，这些设计通常都依赖显式内存屏障 (memory barrier) 来在对等端 (peer) 之间进行同步，并在线程块 (thread-block) 级别指示数据就绪 (data readiness)。使用 NCCL 的 ncclLsaBarrierSession（它为可加载-存储访问 (load-store accessible, LSA) 设备实现内存屏障），我们测量了在宽松内存排序 (relaxed memory ordering) 下此类同步的开销，并将结果报告在图 3 中。尽管 NCCL 的实现可能并未完全优化，但替代设计遵循相同的基本模式：一个标志 (flag) 被传播到所有对等端 (peers)，并且每个 GPU 都等待，直到它观察到来自其他每个参与者的对应信号。因此，它代表了此类方法固有成本的典型情况。
+
+
+
+
+The measured barrier latency shows that each barrier will incur more than ${1\mu s}$ of overhead. In many AllReduce kernels, two such barriers are required. As illustrated in Fig. 1, when a small-message AllReduce completes in roughly ${5\mu s}$ on four GPUs, two barrier calls alone will account for about 40% of the total latency. As emphasized earlier, when targeting near SoL performance, every ${\mu s}$ matters. Thus, eliminating these barriers entirely can yield substantial performance gains.
+
+> 
+实测的屏障 (barrier) 延迟表明，每个屏障都会带来超过 ${1\mu s}$ 的开销。在许多 AllReduce 内核 (kernel) 中，需要两个这样的屏障。如图 1 所示，当小消息 AllReduce 在四块 GPU 上大约 ${5\mu s}$ 内完成时，仅两次屏障调用就会占到总延迟的约 40%。如前文所强调，当以接近 SoL 性能为目标时，每一 ${\mu s}$ 都至关重要。因此，完全消除这些屏障可以带来显著的性能提升。
+
+
+
+
+## IV. DESIGNING BARRIER-FREE COLLECTIVES
+
+Having established that memory barriers introduce nonnegligible overhead, we next consider alternative synchronization mechanisms that achieve the same purpose with lower latency. As discussed in Section III-A, AllReduce can be implemented using either push or pull communication. Since our goal is to approach the SoL, we focus on push mode, which trades additional buffer space, referred to here as a scratch buffer, for roughly half of a GPU-to-GPU RTT.
+
+> 
+在已确定内存屏障 (memory barriers) 会引入不可忽略的开销 (nonnegligible overhead) 之后，我们接下来考虑以更低延迟 (lower latency) 实现相同目的的替代同步机制 (synchronization mechanisms)。如第 III-A 节所述，全归约 (AllReduce) 可以使用推送通信 (push communication) 或拉取通信 (pull communication) 来实现。由于我们的目标是逼近速度极限 (SoL)，我们关注推送模式 (push mode)，它用额外的缓冲区空间 (buffer space)——这里称为暂存缓冲区 (scratch buffer)——换取大约一半的 GPU 到 GPU 往返时间 (GPU-to-GPU RTT)。
+
+
+
+
+1) LL: The first technique we introduce is LL, short for low latency, which originates from the LL protocol in NCCL [11] and is also used in libraries such as NVSHMEM [12] and MSCCL++ [30]. Conventional synchronization signals data arrival using explicit flags and enforced ordering between data and signals. LL removes the signaling step by packing the 8- byte flag with the 8-byte data and transmitting them atomically with 16-byte atomic stores, allowing the receiver to determine data readiness by checking the flag directly. This design halves the effective payload bandwidth and doubles scratch buffer usage, making LL mostly suitable for very small messages.
+
+> 
+1) LL：我们引入的第一项技术是 LL，即低延迟 (low latency) 的缩写，它源自 NCCL [11] 中的 LL 协议，也被 NVSHMEM [12] 和 MSCCL++ [30] 等库所采用。传统同步使用显式标志来指示数据到达，并强制数据与信号之间的顺序。LL 通过将 8 字节标志与 8 字节数据打包，并使用 16 字节原子存储将其原子地传输，从而消除了信令步骤，使接收方能够直接检查标志来确定数据是否就绪。这种设计将有效载荷带宽减半，并使暂存缓冲区 (scratch buffer) 使用量翻倍，因此 LL 主要适用于非常小的消息。
+
+
+
+
+2) Sentinel: Instead of embedding a signal in the transmitted data, the receiving scratch buffer can be initialized with a sentinel value that is unlikely to appear in valid computations, such as the floating-point value -NaN. Data is then written directly to the buffer, and the receiver polls until the value changes from the sentinel, indicating that valid data has arrived. Compared to LL, this approach preserves full effective bandwidth and uses less scratch space, making it more efficient for moderately larger messages. However, it has a few drawbacks. First, unlike LL, which updates its flag each iteration, the sentinel method requires the buffer to be reset before reuse, complicating buffer management. Second, transmitted values must never match the sentinel because a matching value would prevent the receiver from detecting data arrival. Users must therefore exclude such values to ensure correctness.
+
+> 
+2) 哨兵 (Sentinel)：与其将信号嵌入到传输数据中，不如用有效计算中不太可能出现的哨兵值 (sentinel value) 来初始化接收端暂存缓冲区 (receiving scratch buffer)，例如浮点值 -NaN。随后，数据被直接写入该缓冲区，接收方轮询 (polling) 直到该值从哨兵值发生变化，这表明有效数据已经到达。与 LL 相比，这种方法保留了完整的有效带宽 (effective bandwidth)，并使用更少的暂存空间，因此对中等偏大的消息更高效。然而，它有几个缺点。首先，与每次迭代都会更新其标志 (flag) 的 LL 不同，哨兵方法要求在复用之前重置缓冲区，这使缓冲区管理 (buffer management) 变得复杂。其次，传输的值绝不能与哨兵值匹配，因为匹配值会阻止接收方检测到数据到达。因此，用户必须排除这类值以确保正确性。
+
+
+
+
+3) Bidirectional Communication & Double Buffering: Although LL and sentinel synchronization eliminate explicit memory barriers for single exchanges, they are insufficient when messages require multiple iterations due to limited buffer space. In such cases, inputs are partitioned and processed in chunks. Conventional approaches insert barriers between iterations to prevent buffer overwrites. We can eliminate them by using bidirectional communication and double buffering.
+
+> 
+3) 双向通信 (Bidirectional Communication) 与双缓冲 (Double Buffering)：尽管 LL 和哨兵同步 (sentinel synchronization) 为单次交换 (single exchanges) 消除了显式内存屏障 (explicit memory barriers)，但当消息由于缓冲区空间 (buffer space) 有限而需要多次迭代 (multiple iterations) 时，它们仍不足够。在这种情况下，输入会被划分 (partitioned) 并按块 (chunks) 处理。传统方法会在迭代之间插入屏障 (barrier) 以防止缓冲区覆盖 (buffer overwrites)。我们可以通过使用双向通信 (bidirectional communication) 和双缓冲 (double buffering) 来消除它们。
+
+
+
+
+Fig. 4 demonstrates the mechanism. Consider two ranks whose scratch space cannot hold all input data simultaneously. In step ①, both ranks begin with the scratch buffer set to Buffer 0. In step ②, they exchange their first chunks ${C}_{r}^{0}$ . Because Rank 0 processes data faster, it completes the reduction $R$ and writes the result to its output while Rank 1 is still processing. In step 3, Rank 0 advances to the next iteration and switches to Buffer 1 to broadcast chunk ${C}_{0}^{1}$ . It then waits for ${C}_{1}^{1}$ before proceeding, ensuring that data in Buffer 0 is not overwritten before Rank 1 finishes reading it.
+
+> 
+图 4 展示了该机制。考虑两个秩 (rank)，其暂存空间 (scratch space) 无法同时容纳所有输入数据。在步骤 ① 中，两个秩 (rank) 都从设置为缓冲区 0 (Buffer 0) 的暂存缓冲区 (scratch buffer) 开始。在步骤 ② 中，它们交换各自的第一个数据块 (chunk) ${C}_{r}^{0}$。由于秩 0 (Rank 0) 处理数据更快，它在秩 1 (Rank 1) 仍在处理时完成了归约 (reduction) $R$，并将结果写入其输出。在步骤 3 中，秩 0 (Rank 0) 进入下一次迭代，并切换到缓冲区 1 (Buffer 1) 以广播数据块 (chunk) ${C}_{0}^{1}$。然后它等待 ${C}_{1}^{1}$ 后再继续，确保缓冲区 0 (Buffer 0) 中的数据在秩 1 (Rank 1) 完成读取之前不会被覆盖。
+
+
+
+
+![Fig. 5: Overview of the two-shot LL128 atomic AllReduce algorithm. Threads within a CTA are divided into two groups: 496 regular threads and 16 extra threads, which handle displaced elements. The dashed green boxes indicate groups of 8 threads that operate on a 128-byte cache line. Panel A illustrates the ReduceScatter stage, while Panel (B) shows the AllGather stage. The example assumes an out-of-place operation where the output buffer is initialized with sentinel values before kernel execution. To support half-precision floats, each element is only 2 bytes and only 8 extra threads are needed.](images/fig05.jpg)
+
+Fig. 5: Overview of the two-shot LL128 atomic AllReduce algorithm. Threads within a CTA are divided into two groups: 496 regular threads and 16 extra threads, which handle displaced elements. The dashed green boxes indicate groups of 8 threads that operate on a 128-byte cache line. Panel A illustrates the ReduceScatter stage, while Panel (B) shows the AllGather stage. The example assumes an out-of-place operation where the output buffer is initialized with sentinel values before kernel execution. To support half-precision floats, each element is only 2 bytes and only 8 extra threads are needed.
+
+> 
+图 5：两轮 (two-shot) LL128 原子 (atomic) 全归约 (AllReduce) 算法概述。协作线程阵列 (CTA) 内的线程被分为两组：496 个常规线程和 16 个额外线程，后者处理被移位 (displaced) 的元素。绿色虚线框表示以 128 字节缓存行 (cache line) 为单位进行操作的 8 线程组。子图 A 展示归约散射 (ReduceScatter) 阶段，子图 (B) 展示全收集 (AllGather) 阶段。该示例假设执行非原位 (out-of-place) 操作，其中输出缓冲区在内核 (kernel) 执行前已用哨兵值 (sentinel values) 初始化。为支持半精度浮点数 (half-precision floats)，每个元素仅 2 字节，且仅需 8 个额外线程。
+
+
+
+
+This bidirectional exchange, combined with double buffering, ensures that a rank cannot overwrite a peer's buffer for the next iteration until it has received data from that peer in the current one. This assumes that each rank communicates with a given peer at most once per iteration, avoiding multiple stores to the same remote address. In effect, each receive from a peer serves as an implicit permission for the next send, analogous to credit-based flow control. This mechanism allows multiple reduction iterations without costly global memory barriers.
+
+> 
+这种双向交换 (bidirectional exchange) 与双缓冲 (double buffering) 相结合，确保一个 rank 在当前迭代中从某个对等方 (peer) 接收到数据之前，不能覆盖该对等方用于下一次迭代的缓冲区 (buffer)。这假设每个 rank 在每次迭代中与给定对等方至多通信一次，从而避免对同一远程地址 (remote address) 的多次存储 (store)。实际上，从对等方的每次接收都充当对下一次发送的隐式许可 (implicit permission)，类似于基于信用的流控 (credit-based flow control)。该机制允许进行多次归约迭代 (reduction iteration)，而无需昂贵的全局内存屏障 (global memory barrier)。
+
+
+
+
+4) LL128 Atomic AllReduce: The last technique we present for removing the global memory barrier is a new AllReduce algorithm that uses a synchronization mechanism different from LL and sentinel. Since it resembles NCCL's LL128 protocol [11] and relies on atomic additions, we refer to it as the two-shot LL128 atomic algorithm. An overview is shown in Fig. 5. Like the standard two-shot design, the algorithm proceeds in two phases, which we describe in detail below.
+
+> 
+4) LL128 原子全归约 (LL128 Atomic AllReduce)：我们为消除全局内存屏障 (global memory barrier) 而提出的最后一项技术，是一种新的全归约 (AllReduce) 算法，它使用一种不同于 LL 和哨兵 (sentinel) 的同步机制 (synchronization mechanism)。由于它类似于 NCCL 的 LL128 协议 (protocol) [11]，并依赖原子加法 (atomic additions)，我们将其称为两阶段 LL128 原子算法 (two-shot LL128 atomic algorithm)。图 5 给出了其概览。与标准的两阶段 (two-shot) 设计类似，该算法分两个阶段进行，我们将在下面详细描述。
+
+
+
+
+a) ReduceScatter: As in standard ReduceScatter algorithms, the input is partitioned into $N$ chunks, where $N$ is the number of GPUs. To exploit GPU parallelism, CTAs are TABLE I: Comparison of low-latency AllReduce algorithms. $N$ denotes the number of GPUs, $M$ the total message size, and $D$ the amount of data reduced per iteration. Latency is expressed as the number of synchronizations required per iteration. "Scratch Space / Iter" denotes the scratch buffer capacity required to reduce $D$ bytes of data per iteration. evenly distributed across ranks, and each CTA is assigned a target rank. For example, in Fig. 5, CTA 0 on both GPU 0 and 1 processes the chunk belonging to GPU 0. Each CTA then reads its assigned partition and performs the steps below.
+
+> 
+a) 归约散射 (ReduceScatter)：与标准 ReduceScatter 算法一样，输入被划分为 $N$ 个块 (chunk)，其中 $N$ 是 GPU 的数量。为了利用 GPU 并行性，CTA 表 I：低延迟全归约 (AllReduce) 算法的比较。$N$ 表示 GPU 的数量，$M$ 表示总消息大小，$D$ 表示每次迭代归约的数据量。延迟 (latency) 表示为每次迭代所需的同步 (synchronization) 次数。“每次迭代暂存空间 (Scratch Space / Iter)”表示每次迭代归约 $D$ 字节数据所需的暂存缓冲区 (scratch buffer) 容量。均匀分布在各个 rank 上，并且每个 CTA 被分配一个目标 rank。例如，在图 5 中，GPU 0 和 GPU 1 上的 CTA 0 都处理属于 GPU 0 的块。然后，每个 CTA 读取其分配的分区 (partition) 并执行以下步骤。
+
+
+
+
+<table><tr><td>AllReduce Algorithm</td><td>Comm. Volume per GPU</td><td>Latency, #Synchronizations</td><td>Scratch Space / Iter</td><td>Deterministic</td></tr><tr><td>One-shot (LL)</td><td>$2\left( {N - 1}\right) M$</td><td>1</td><td>${2ND}$</td><td>✓</td></tr><tr><td>One-shot (Sentinel)</td><td>$\left( {N - 1}\right) M$</td><td>1</td><td>${ND}$</td><td>✓</td></tr><tr><td>Two-shot (LL)</td><td>$4\left( {N - 1}\right) \frac{M}{N}$</td><td>2</td><td>${2D}$</td><td>✓</td></tr><tr><td>Two-shot (Sentinel)</td><td>$2\left( {N - 1}\right) \frac{M}{N}$</td><td>2</td><td>$D$</td><td>✓</td></tr><tr><td>Two-shot (LL128 Atomic)</td><td>$\approx  2\left( {N - 1}\right) \frac{M}{N}$</td><td>2</td><td>$\approx  \frac{D}{N}$</td><td>✘</td></tr></table>
+
+1 Threads operate in groups of 8, and each thread processes 16 bytes from the assigned partition. For FP32 data, each thread handles 4 elements (e0-e3). Together, the 8 threads operate on 128 bytes, which matches the size of a cache line.
+
+> 
+1 线程 (thread) 以 8 个为一组运行，每个线程处理来自所分配分区 (partition) 的 16 字节 (byte)。对于 FP32 数据，每个线程处理 4 个元素 (element) (e0-e3)。8 个线程合起来操作 128 字节，这与缓存行 (cache line) 的大小相匹配。
+
+
+
+
+2 Within each group, the first thread acts as the flag carrier. It moves its first element ${e}_{0}$ into a shared memory region reserved for displaced values. A __syncthreads () then ensures that the displaced data is visible to all threads.
+
+> 
+2 在每个组 (group) 内，第一个线程充当标志载体 (flag carrier)。它将其第一个元素 ${e}_{0}$ 移入为被移出的值 (displaced values) 预留的共享内存区域 (shared memory region)。随后，__syncthreads () 确保被移出的数据 (displaced data) 对所有线程可见。
+
+
+
+
+3 Threads in the extra-thread group read the displaced elements from shared memory.
+
+> 
+3 额外线程组 (extra-thread group) 中的线程 (threads) 从共享内存 (shared memory) 中读取位移元素 (displaced elements)。
+
+
+
+
+4 Each flag carrier sets the first element of its vector to 1. 5 All threads then perform an atomic add to the scratch buffer corresponding to the target rank. NVLink ensures that these operations are applied atomically at the cache-line level.
+
+> 
+4 每个标志载体 (flag carrier) 将其向量 (vector) 的第一个元素设为 1。5 随后所有线程 (thread) 对与目标 rank (target rank) 对应的暂存缓冲区 (scratch buffer) 执行原子加 (atomic add)。NVLink 确保这些操作在缓存行 (cache-line) 级别以原子方式应用。
+
+
+
+
+b) AllGather: Since NVLink performs 128-byte writes atomically, when the first element of a cache line (the flag) equals the number of ranks $N$ , it indicates that all ranks have contributed. The AllGather phase then proceeds as follows.
+
+> 
+b) 全收集 (AllGather)：由于 NVLink 以原子方式执行 128 字节写入，当缓存行 (cache line) 的第一个元素（标志位 (flag)）等于 rank 的数量 $N$ 时，就表明所有 rank 都已贡献。随后，全收集 (AllGather) 阶段按如下方式进行。
+
+
+
+
+1 Each CTA whose target rank matches its own rank polls the corresponding region in the scratch buffer. Within each group of eight threads, the flag carrier repeatedly checks the first element of its vector until the value equals $N$ .
+
+> 
+1 每个目标秩 (target rank) 与自身秩 (own rank) 匹配的协作线程阵列 (CTA) 都会轮询暂存缓冲区 (scratch buffer) 中的对应区域。在每组八个线程内，标志携带者 (flag carrier) 会反复检查其向量的第一个元素，直到该值等于 $N$。
+
+
+
+
+2 Once the data is confirmed to be ready, the extra threads write their 16-byte displaced elements into shared memory. A __syncthreads () is executed afterwards to ensure visibility of data.
+
+> 
+2 一旦数据确认就绪，额外线程将其16字节的位移元素写入共享内存 (shared memory)。随后执行 __syncthreads() 以确保数据的可见性。
+
+
+
+
+3 The flag carriers from the regular thread group then read the displaced elements from shared memory, restoring the correct element within their vectors.
+
+> 
+3 常规线程组 (regular thread group) 中的标志承载者 (flag carriers) 随后从共享内存 (shared memory) 中读取被置换元素 (displaced elements)，从而在其向量 (vectors) 内恢复出正确元素。
+
+
+
+
+4 All regular threads write their data to the corresponding region of the output buffer.
+
+> 
+4 所有常规线程将其数据写入输出缓冲区 (output buffer) 的对应区域。
+
+
+
+
+5 CTAs then poll the output buffer partitions associated with their target ranks until the complete data becomes available.
+
+> 
+5 个协作线程阵列 (CTA) 随后轮询 (poll) 与其目标秩 (target ranks) 相关联的输出缓冲区分区 (output buffer partitions)，直到完整数据变为可用为止。
+
+
+
+
+5) Algorithm Comparison: The two-shot LL128 atomic algorithm was proposed to improve scalability. The motivation is twofold. First, atomic additions synchronized at the L2 cache may be cheaper than waiting for all data and performing reductions within CTAs. Second, the required scratch buffer space is only $\frac{D}{N}$ . The algorithm also wastes far less bandwidth than LL. For 32-bit floats, it requires only 4 extra bytes per 128 bytes of data $\left( { \approx  3\% }\right)$ . For 16-bit floats, it requires 2 extra bytes per 128 bytes $\left( { \approx  {1.5}\% }\right)$ .
+
+> 
+5) 算法比较：提出 two-shot LL128 原子算法 (two-shot LL128 atomic algorithm) 是为了提升可扩展性。其动机有两个方面。第一，在 L2 缓存 (L2 cache) 处同步的原子加法 (atomic additions) 可能比等待所有数据并在 CTA 内执行归约 (reductions) 更便宜。第二，所需的暂存缓冲区 (scratch buffer) 空间仅为 $\frac{D}{N}$。与 LL 相比，该算法浪费的带宽 (bandwidth) 也少得多。对于 32 位浮点数，每 128 字节数据仅需额外 4 字节 $\left( { \approx  3\% }\right)$。对于 16 位浮点数，每 128 字节数据仅需额外 2 字节 $\left( { \approx  {1.5}\% }\right)$。
+
+
+
+
+![Fig. 6: Overview of the proposed low-latency API, showing device-side and host-side functions.](images/fig06.jpg)
+
+Fig. 6: Overview of the proposed low-latency API, showing device-side and host-side functions.
+
+> 
+图 6：所提出的低延迟API（应用程序接口）概览，展示了设备端（device-side）和主机端（host-side）功能。
+
+
+
+
+The algorithm has several limitations. It requires NVLink to guarantee cache-line-level atomic addition and supports only single- and half-precision types due to the availability of vectorized atomics in CUDA [40], [41]. It is also limited to addition, as the embedded flag relies on commutativity, and CUDA does not provide vectorized atomic multiplication. In practice, this is not too restrictive since addition dominates most target workloads, such as LLM inference. Finally, the algorithm is non-deterministic because floating-point atomic ordering is not guaranteed. A one-shot variant is possible, but different ranks may observe different results, which violates AllReduce semantics [16]. The trade-offs of different low-latency algorithms are summarized in Table I.
+
+> 
+该算法 (algorithm) 存在若干限制。它需要 NVLink 来保证缓存行级原子加法 (cache-line-level atomic addition)，并且由于 CUDA [40], [41] 中向量化原子操作 (vectorized atomics) 的可用性，仅支持单精度和半精度类型 (single- and half-precision types)。它还仅限于加法 (addition)，因为内嵌标志 (embedded flag) 依赖于交换性 (commutativity)，并且 CUDA 不提供向量化原子乘法 (vectorized atomic multiplication)。在实践中，这并不太受限，因为加法在大多数目标工作负载 (target workloads) 中占主导，例如 LLM 推理 (LLM inference)。最后，该算法 (algorithm) 是非确定性的 (non-deterministic)，因为浮点原子顺序 (floating-point atomic ordering) 无法保证。单次变体 (one-shot variant) 是可能的，但不同秩 (ranks) 可能观察到不同结果，这违反了 AllReduce 语义 (AllReduce semantics) [16]。不同低延迟算法 (low-latency algorithms) 的权衡 (trade-offs) 总结于表 I (Table I)。
+
+
+
+
+In terms of numerical stability, the algorithm obeys the standard forward-error bound for floating-point summation. For $N$ ranks and unit roundoff $u$ in the accumulation format, assuming no overflow or underflow,
+
+> 
+在数值稳定性 (numerical stability) 方面，该算法遵循浮点求和 (floating-point summation) 的标准前向误差界 (forward-error bound)。对于 $N$ 个进程 (rank) 以及累加格式 (accumulation format) 中的单位舍入误差 (unit roundoff) $u$，假设没有上溢或下溢 (overflow or underflow)，
+
+
+
+
+$$
+\left| {\mathrm{{fl}}\left( {\mathop{\sum }\limits_{{i = 1}}^{N}{x}_{i}}\right)  - \mathop{\sum }\limits_{{i = 1}}^{N}{x}_{i}}\right|  \leq  {\gamma }_{N - 1}\mathop{\sum }\limits_{{i = 1}}^{N}\left| {x}_{i}\right| ,{\gamma }_{k} = \frac{ku}{1 - {ku}}.
+$$
+
+> 
+$$
+\left| {\mathrm{{fl}}\left( {\mathop{\sum }\limits_{{i = 1}}^{N}{x}_{i}}\right)  - \mathop{\sum }\limits_{{i = 1}}^{N}{x}_{i}}\right|  \leq  {\gamma }_{N - 1}\mathop{\sum }\limits_{{i = 1}}^{N}\left| {x}_{i}\right| ,{\gamma }_{k} = \frac{ku}{1 - {ku}}.
+$$
+
+
+
+
+As an example, for FP32 and 64 ranks, the worst-case coefficient is ${\gamma }_{63} \approx  {3.8} \times  {10}^{-6}$ . The bound is larger for FP16 and BF16. Thus, LL128 atomic should be treated as a performance-oriented option for workloads that tolerate the precision of the selected accumulation format.
+
+> 
+例如，对于 FP32 和 64 个秩 (rank)，最坏情况系数为 ${\gamma }_{63} \approx  {3.8} \times  {10}^{-6}$。对于 FP16 和 BF16，该界限更大。因此，LL128 原子操作应被视为一种面向性能的选项，适用于能够容忍所选累积格式精度的工作负载。
+
+
+
+
+## V. LOW-LATENCY API DESIGN
+
+Building on the techniques described previously, we translate them into APIs designed to meet three requirements. (1) Compatibility with NCCL's existing device-side interface. ② Encapsulation of the low-latency techniques introduced earlier through a unified abstraction. 3 Sufficient flexibility to serve as building blocks for custom communication kernels. Guided by these principles, we develop a set of experimental low-latency APIs and integrate them into NCCL. Figure 6 provides an overview. Due to space constraints, we describe only
+
+> 
+基于前文所述技术，我们将其转化为旨在满足三项要求的应用程序接口 (API)。(1) 与 NCCL 现有设备端接口 (device-side interface) 的兼容性。② 通过统一抽象 (unified abstraction) 封装早先引入的低延迟技术 (low-latency techniques)。3 具有足够的灵活性，可作为自定义通信内核 (custom communication kernels) 的构建模块 (building blocks)。在这些原则的指导下，我们开发了一组实验性低延迟 API，并将其集成到 NCCL 中。图 6 提供了概览。由于篇幅限制，我们仅描述
+
+
+
+
+the key primitives below. Full documentation and additional examples are available in the released source ${\operatorname{code}}^{1}$ .
+
+> 
+以下关键原语 (primitives)。完整文档和更多示例可在已发布的源代码 ${\operatorname{code}}^{1}$ 中获取。
+
+
+
+
+![Fig. 7: Example construction and layout of a nccLLLBuffer object. Each CTA is assigned a fixed-size region per epoch, while epochs alternate between sub-buffers. Invoking advanceEpoch () switches the active sub-buffer and increments the internal epoch value.](images/fig07.jpg)
+
+Fig. 7: Example construction and layout of a nccLLLBuffer object. Each CTA is assigned a fixed-size region per epoch, while epochs alternate between sub-buffers. Invoking advanceEpoch () switches the active sub-buffer and increments the internal epoch value.
+
+> 
+图 7：nccLLLBuffer 对象的示例构造与布局。每个 CTA 在每个轮次 (epoch) 中被分配一个固定大小的区域，而各轮次 (epoch) 在子缓冲区 (sub-buffer) 之间交替。调用 advanceEpoch () 会切换活动子缓冲区 (sub-buffer)，并递增内部轮次 (epoch) 值。
+
+
+
+
+a) nccClLLBuffer: To improve flexibility, we adopt a buffer-centric design for the new APIs, centered on the device-side ncclLLBuffer object. This abstraction wraps arbitrary symmetric memory and exposes low-latency primitives that operate directly on the buffer. A unified interface supports both LL and sentinel modes, selectable via the ncc1LLSyncMode template parameter at initialization, allowing users to switch synchronization mechanisms with minimal changes. The LL128 method is not included because it requires 8 threads to operate as a unit, which does not fit the thread-level API design and is incompatible with the proposed primitives. A second template parameter controls whether NVLS multicast instructions are used.
+
+> 
+a) nccClLLBuffer：为提高灵活性，我们为新的 API 采用以缓冲区为中心的设计 (buffer-centric design)，其核心是设备端 (device-side) 的 ncclLLBuffer 对象。该抽象封装任意对称内存 (symmetric memory)，并暴露直接在该缓冲区上操作的低延迟原语 (low-latency primitives)。统一接口支持 LL 和哨兵 (sentinel) 模式，二者可在初始化时通过 ncc1LLSyncMode 模板参数选择，使用户能够以最小改动切换同步机制。LL128 方法未包含在内，因为它需要 8 个线程作为一个单元来操作，这不符合线程级 API 设计，并且与所提出的原语不兼容。第二个模板参数控制是否使用 NVLS 多播 (multicast) 指令。
+
+
+
+
+To support multi-buffered execution, ncc1LLBuffer organizes memory according to parameters such as bytesPerCtaPerEpoch and roundRobinFactor. Buffer addresses are derived from the current epoch and CTA index, allowing different iterations to operate on disjoint memory regions. Figure 7 shows an example partitioning of a symmetric buffer under this scheme. When roundRobinFactor is set to 0 , the buffer is no longer subdivided, the offset remains fixed, and advanceEpoch () performs no operation. In this mode, users need to manage buffer offsets explicitly. The object also maintains an internal epoch value, which is used as the flag transmitted alongside the data when the LL protocol is selected.
+
+> 
+为了支持多缓冲执行 (multi-buffered execution)，ncc1LLBuffer 根据 bytesPerCtaPerEpoch 和 roundRobinFactor 等参数组织内存。缓冲区 (buffer) 地址由当前轮次 (epoch) 和 CTA 索引推导得到，从而使不同迭代 (iteration) 能够操作不相交的内存区域。图 7 展示了该方案下对称缓冲区 (symmetric buffer) 的一个示例分区。当 roundRobinFactor 设置为 0 时，缓冲区不再细分，偏移量保持固定，advanceEpoch () 不执行任何操作。在此模式下，用户需要显式管理缓冲区偏移量。该对象还维护一个内部轮次 (epoch) 值，当选择 LL 协议 (LL protocol) 时，它被用作随数据一起传输的标志。
+
+
+
+
+---
+
+${}^{1}$ https://github.com/ss16118/low-latency-nccl
+
+> 
+${}^{1}$ https://github.com/ss16118/low-latency-nccl
+
+
+
+
+---
+
+![Fig. 8: Illustration of send() and recv() of a ncc1LLBuffer for a single CTA.](images/fig08.jpg)
+
+Fig. 8: Illustration of send() and recv() of a ncc1LLBuffer for a single CTA.
+
+> 
+图 8：单个 CTA 的 ncc1LLBuffer 的 send() 和 recv() 示意图。
+
+
+
+
+b) send: The send primitive writes a value into a specified peer slot. The destination layout is determined by the type T: each element occupies sizeof (T) bytes, or $2 \times$ sizeof (T) for LL mode. This layout is used consistently across all API functions templated on T. In LL mode, the payload is packed with its flag whose size also equals sizeof (T). In sentinel mode, the receiving buffer must be initialized with sentinel values prior to transmission, and it is the user's responsibility to ensure this.
+
+> 
+b) 发送 (send)：发送原语 (send primitive) 将某个值写入指定的对等槽位 (peer slot)。目标布局 (destination layout) 由类型 T 决定：每个元素占用 sizeof (T) 字节，或在 LL 模式 (LL mode) 下占用 $2 \times$ sizeof (T)。该布局在所有以 T 为模板参数的 API 函数 (API functions) 中一致使用。在 LL 模式 (LL mode) 下，有效载荷 (payload) 与其标志 (flag) 打包在一起，标志的大小也等于 sizeof (T)。在哨兵模式 (sentinel mode) 下，接收缓冲区 (receiving buffer) 必须在传输前用哨兵值 (sentinel values) 初始化，并且由用户负责确保这一点。
+
+
+
+
+c) recv: The recv primitive polls a single buffer slot until valid data is observed, according to the chosen synchronization mode. In sentinel mode, it waits until the value differs from the sentinel, whereas in LL mode it waits until the flag matches the current epoch. The template parameter $\mathbb{T}$ used for recv must match that of the corresponding send operation. After reading, the slot can optionally be reset for reuse, as controlled by the Reset parameter. The visibility of the reset value is not guaranteed after the function returns. Users can enforce visibility by issuing a ___threadfence ( ).
+
+> 
+c) recv：recv 原语 (primitive) 会轮询单个缓冲区槽位 (buffer slot)，直到根据所选的同步模式 (synchronization mode) 观察到有效数据。在哨兵模式 (sentinel mode) 下，它等待直到该值与哨兵 (sentinel) 不同；而在 LL 模式 (LL mode) 下，它等待直到标志 (flag) 与当前轮次 (epoch) 匹配。用于 recv 的模板参数 (template parameter) $\mathbb{T}$ 必须与对应 send 操作 (operation) 的模板参数匹配。读取后，该槽位可以可选地重置以供复用，具体由 Reset 参数 (parameter) 控制。函数返回后，不保证重置值 (reset value) 的可见性 (visibility)。用户可以通过发出 ___threadfence ( ) 来强制保证可见性 (visibility)。
+
+
+
+
+d) recvUnrolled: recvUnrolled extends recv to support receiving multiple elements with compile-time unrolling. It allows users to specify minimum and maximum element counts, enabling the compiler to generate optimized polling code. Elements in the range [0, MinEltCount) are always accessed, while elements in [MinEltCount, MaxEltCount) are accessed conditionally based on eltCount. This design is especially useful when receiving data from multiple peers and can significantly improve performance when eltCount is known in advance.
+
+> 
+d) recvUnrolled：recvUnrolled 扩展了 recv，以支持通过编译期展开 (compile-time unrolling) 接收多个元素。它允许用户指定最小和最大元素计数 (element counts)，使编译器能够生成优化的轮询代码 (polling code)。范围 [0, MinEltCount) 中的元素始终会被访问，而 [MinEltCount, MaxEltCount) 中的元素则根据 eltCount 有条件地访问。当从多个对等端 (peers) 接收数据时，这种设计尤其有用，并且在 eltCount 提前已知时可以显著提高性能。
+
+
+
+
+e) recvReduce: The recvReduce primitive combines reception and reduction. It receives elements from multiple peers, converts them to an accumulator type, and applies a user-defined reduction operator, returning the accumulated result. Internally, it leverages recvUnrolled () for data reception and inherits its compile-time unrolling parameters.
+
+> 
+e) recvReduce：recvReduce 原语 (primitive) 将接收 (reception) 与归约 (reduction) 结合在一起。它从多个对等方 (peer) 接收元素，将其转换为累加器类型 (accumulator type)，并应用用户定义的归约算子 (reduction operator)，返回累加结果。内部上，它利用 recvUnrolled () 进行数据接收，并继承其编译期展开参数 (compile-time unrolling parameters)。
+
+
+
+
+f) bcast: The bcast primitive writes a value to all peers simultaneously. When multicast support is enabled, the implementation uses hardware multicast to distribute data in a single operation. Otherwise, it iterates over peers. The template unroll factor controls loop expansion for improved throughput when broadcasting to multiple ranks.
+
+> 
+f) bcast：bcast 原语 (primitive) 将一个值同时写入所有对等端 (peer)。当启用多播 (multicast) 支持时，实现会使用硬件多播 (hardware multicast) 在单次操作中分发数据。否则，它会遍历对等端。模板展开因子 (template unroll factor) 控制循环展开 (loop expansion)，以在向多个秩 (rank) 广播时提高吞吐量 (throughput)。
+
+
+
+
+g) reset: The reset operation clears a specified buffer slot. In sentinel mode, it restores the sentinel value corresponding to the given type T, whereas in LL mode it sets the slot contents to zero. Resetting does not guarantee global visibility, and users may enforce it with an explicit memory fence. Although functions such as recv() and recvReduce () can optionally perform a reset after data reception, providing a dedicated primitive offers finer control over the buffer and allows users to decouple it from data reception when needed. The resetRange () function supports resetting multiple slots, but is omitted here for brevity.
+
+> 
+g) 重置 (reset)：重置 (reset) 操作会清除指定的缓冲区槽位 (buffer slot)。在哨兵模式 (sentinel mode) 下，它会恢复与给定类型 T 对应的哨兵值 (sentinel value)；而在 LL 模式 (LL mode) 下，它会将该槽位内容 (slot contents) 置零。重置 (reset) 并不保证全局可见性 (global visibility)，用户可以通过显式内存栅栏 (memory fence) 来强制保证。尽管诸如 recv() 和 recvReduce () 之类的函数可以选择在数据接收后执行重置 (reset)，但提供专用原语 (dedicated primitive) 能对缓冲区进行更精细的控制，并在需要时允许用户将其与数据接收解耦。resetRange () 函数支持重置多个槽位 (slot)，但为简洁起见，此处省略。
+
+
+
+
+h) Host-side Functions: The API also provides host-side utilities. The function ncclCalcScratchBufferSize () computes the minimum buffer size needed for a given configuration, accounting for element size, rank count, CTA count, synchronization mode, and the round-robin factor, which determines the number of sub-buffers required for double or multiple buffering. The initialization function ncc1LLBufferInitSentinel () prepares the given buffers for sentinel mode by filling them with type-specific sentinel values.
+
+> 
+h) 主机侧函数 (Host-side Functions)：该 API 还提供主机侧实用工具 (host-side utilities)。函数 ncclCalcScratchBufferSize () 计算给定配置 (configuration) 所需的最小缓冲区大小 (minimum buffer size)，其中考虑了元素大小 (element size)、rank 数量 (rank count)、CTA 数量 (CTA count)、同步模式 (synchronization mode) 以及轮转因子 (round-robin factor)；该因子决定双缓冲 (double buffering) 或多重缓冲 (multiple buffering) 所需的子缓冲区 (sub-buffer) 数量。初始化函数 (initialization function) ncc1LLBufferInitSentinel () 通过用类型特定的哨兵值 (sentinel values) 填充给定缓冲区 (given buffers)，为哨兵模式 (sentinel mode) 准备这些缓冲区。
+
+
+
+
+The host interface is intentionally minimal to simplify the development of custom kernels. Users only need to allocate and initialize symmetric buffers as usual, without additional orchestration. Once wrapped by the device-side abstraction, all necessary low-latency primitives will be exposed, allowing developers to focus on algorithm design rather than the setup.
+
+> 
+主机接口 (host interface) 被有意设计得极简，以简化自定义内核 (custom kernels) 的开发。用户只需像往常一样分配并初始化对称缓冲区 (symmetric buffers)，无需额外的编排 (orchestration)。一旦由设备端抽象 (device-side abstraction) 封装，所有必要的低延迟原语 (low-latency primitives) 都将被暴露出来，使开发者能够专注于算法设计，而不是设置工作。
+
+
+
+
+i) Constraints: The low latency APIs presented here are intentionally fine grained. Unlike NVSHMEM, which provides APIs at the thread, warp, and block levels, our design exposes only thread level primitives. This choice maximizes user control and allows implementations to achieve the lowest possible latency. Moreover, the APIs favor bidirectional communication patterns to achieve safety and optimal performance. As an example, algorithms with independent per-iteration communication, such as one-shot and two-shot AllReduce, can operate without barriers because each step uses disjoint buffers and each rank both sends and receives within the same iteration. In contrast, algorithms with inter-step dependencies and without bidirectional communication, such as ring AllReduce, still require explicit memory barriers. In a ring schedule, each rank must receive a chunk before reducing and forwarding it, as advancing early risks overwriting unconsumed data.
+
+> 
+i) 约束：这里介绍的低延迟 API (low latency API) 有意设计为细粒度 (fine-grained)。与 NVSHMEM 不同，后者在线程 (thread)、线程束 (warp) 和线程块 (block) 级别提供 API，我们的设计仅暴露线程级 (thread-level) 原语 (primitive)。这一选择最大化用户控制 (user control)，并使实现 (implementation) 能够达到尽可能低的延迟 (latency)。此外，这些 API 倾向于双向通信模式 (bidirectional communication pattern)，以实现安全性 (safety) 和最优性能 (optimal performance)。例如，具有每次迭代独立通信 (independent per-iteration communication) 的算法，如 one-shot 和 two-shot AllReduce，可以在无屏障 (barrier) 的情况下运行，因为每一步都使用不相交缓冲区 (disjoint buffer)，并且每个 rank 在同一次迭代内既发送又接收。相比之下，具有步骤间依赖 (inter-step dependency) 且没有双向通信 (bidirectional communication) 的算法，如环形 (ring) AllReduce，仍然需要显式的内存屏障 (memory barrier)。在环形调度 (ring schedule) 中，每个 rank 必须先接收一个数据块 (chunk)，然后才能对其进行归约 (reduce) 并转发 (forward)，因为提前推进可能会覆盖尚未消费的数据。
+
+
+
+
+j) NCCL Collective Integration: Using the proposed APIs, we implement one-shot, two-shot, and two-shot LL128 atomic AllReduce, along with other collectives. Taking AllReduce as an example, algorithms can be selected via NCCL_SYM_KERNEL: AllReduce_LLBuffer for one-shot, AllReduce_LLBuffer_Twoshot for two-shot, and AllReduce_LL128_Atomic for the LL128 atomic variant. The synchronization mode is controlled by NCCL_SYM_LLBUFFER_SYNC, allowing users to switch between LL and sentinel mechanisms for the same algorithm. Additionally, two-shot AllReduce requires symmetric (LSA) output buffers, while one-shot only relies on symmetric scratch buffers initialized by NCCL and has no such requirements.
+
+> 
+j) NCCL 集合通信集成 (NCCL Collective Integration)：利用所提出的 API，我们实现了单次 (one-shot) 全归约 (AllReduce)、两次 (two-shot) 全归约 (AllReduce) 以及两次 LL128 原子全归约 (two-shot LL128 atomic AllReduce)，并实现了其他集合通信操作 (collectives)。以全归约 (AllReduce) 为例，可通过 NCCL_SYM_KERNEL 选择算法：AllReduce_LLBuffer 对应单次 (one-shot)，AllReduce_LLBuffer_Twoshot 对应两次 (two-shot)，AllReduce_LL128_Atomic 对应 LL128 原子变体 (LL128 atomic variant)。同步模式由 NCCL_SYM_LLBUFFER_SYNC 控制，允许用户针对同一算法在 LL 与哨兵机制 (sentinel mechanisms) 之间切换。此外，两次全归约 (two-shot AllReduce) 需要对称 (symmetric) (LSA) 输出缓冲区，而单次 (one-shot) 仅依赖由 NCCL 初始化的对称临时缓冲区 (symmetric scratch buffer)，没有此类要求。
+
+
+
+
+The released artifact also includes low-latency Broadcast, Reduce, ReduceScatter, and AllGather kernels constructed from the same LL and sentinel primitives. Fig. 9: Example implementation of a one-shot AllReduce using the low-latency API with ncclLL synchronization. Colored regions highlight the three stages of the algorithm.
+
+> 
+发布的构件还包括由相同的 LL 与哨兵 (sentinel) 原语构建的低延迟 Broadcast、Reduce、ReduceScatter 和 AllGather 内核。图 9：使用低延迟 API 与 ncclLL 同步实现的一次性 AllReduce 示例实现。彩色区域突出显示了该算法的三个阶段。
+
+
+
+
+---
+
+ncclLLBuffer<ncclLL, false> llBuf(   )
+
+> 
+ncclLLBuffer<ncclLL, false> llBuf(   )
+
+
+
+
+/*buf=*/ scratchSymPtr,
+
+/*bytesPerCtaPerEpoch=*/ bytesPerCtaPerEpoch,
+
+> 
+`/*bytesPerCtaPerEpoch=*/ bytesPerCtaPerEpoch,`
+
+
+
+
+/*block=*/ blockIdx.x, 																			Initialize buffer
+
+> 
+/*block=*/ blockIdx.x, 																		初始化缓冲区 (buffer)
+
+
+
+
+/*roundRobinFactor=*/ 2, // Double buffering
+
+> 
+/*roundRobinFactor=*/ 2, // 双缓冲 (double buffering)
+
+
+
+
+/*mmHandle=*/ ncclMultimemHandle\{\}
+
+> 
+/*mmHandle=*/ ncclMultimemHandle{}
+
+
+
+
+for (int i = tid; i < nElts; i += nthreads) \{
+
+> 
+for (int i = tid; i < nElts; i += nthreads) \{
+
+
+
+
+float data = inputBuf[i];
+
+int slot = threadIdx.x + rank * blockDim.x; Load and Broadcast
+
+> 
+int slot = threadIdx.x + rank * blockDim.x; 加载并广播 (Load and Broadcast)
+
+
+
+
+llBuf.template bcast<4, float>(team, slot, data);
+
+> 
+llBuf.template bcast<4, float>(team, slot, data);
+
+
+
+
+float result = llBuf.template recvReduce<4, float, false>(   )
+
+> 
+`float result = llBuf.template recvReduce<4, float, false>(   )`
+
+
+
+
+/*eltStart=*/ threadIdx.x,
+
+/*eltCount=*/ nRanks,
+
+/*eltStride=*/ blockDim.x, Receive and reduce
+
+> 
+`/*eltStride=*/ blockDim.x, 接收并归约 (Receive and reduce)`
+
+
+
+
+/*eltToAcc=*/ [](float val) -> float \{ return val; \},
+
+> 
+/*eltToAcc=*/ [](float val) -> float { return val; },
+
+
+
+
+/*reduce=*/ [](float a, float b) -> float \{ return a + b; \},
+
+> 
+/*reduce=*/ [](float a, float b) -> float \{ return a + b; \},
+
+
+
+
+);
+
+outputBuf[i] = result;
+
+llBuf.advanceEpoch();
+
+---
+
+## A. Example One-shot AllReduce
+
+Fig. 9 shows a one-shot AllReduce implemented with the proposed low-latency API that uses ncclLL synchronization and supports arbitrary message sizes. A nccClLLBuffer is first constructed over symmetric scratch memory with double buffering. Each thread iterates over its assigned elements, loads a value from the input buffer, and invokes bcast to distribute it to peer slots. It then calls recvReduce to poll, receive, and reduce values from all ranks. The result is written to the output buffer, and advanceEpoch () switches to the next sub-buffer. This example illustrates that the API expresses collective algorithms succinctly while reducing the effort required to implement custom low-latency kernels.
+
+> 
+图 9 (Fig. 9) 展示了一个一次性全归约 (one-shot AllReduce)，它使用所提出的低延迟应用程序接口 (low-latency API) 实现，该接口采用 ncclLL 同步 (ncclLL synchronization)，并支持任意消息大小 (arbitrary message sizes)。首先在对称暂存内存 (symmetric scratch memory) 上通过双缓冲 (double buffering) 构造一个 nccClLLBuffer。每个线程 (thread) 遍历其分配的元素，从输入缓冲区 (input buffer) 加载一个值，并调用 bcast 将其分发到对等槽位 (peer slots)。然后它调用 recvReduce 来轮询、接收并归约来自所有 rank 的值。结果被写入输出缓冲区 (output buffer)，而 advanceEpoch () 切换到下一个子缓冲区 (sub-buffer)。该示例表明，该 API 能简洁地表达集合通信算法 (collective algorithms)，同时减少实现自定义低延迟内核 (custom low-latency kernels) 所需的工作量。
+
+
+
+
+VI. MEASURING THE SPEED-OF-LIGHT OF ALLREDUCE
+
+> 
+VI. 测量 AllReduce 的光速 (speed-of-light)
+
+
+
+
+![Fig. 10: Minimal data movement in an AllReduce. All buffers are assumed to reside in L2, which serves as the point of coherency (PoC) across GPUs in NVIDIA's systems. SM (streaming multiprocessor) is used instead of CTA to emphasize the hardware unit executing the memory operations.](images/fig09.jpg)
+
+Fig. 10: Minimal data movement in an AllReduce. All buffers are assumed to reside in L2, which serves as the point of coherency (PoC) across GPUs in NVIDIA's systems. SM (streaming multiprocessor) is used instead of CTA to emphasize the hardware unit executing the memory operations.
+
+> 
+图 10：全归约 (AllReduce) 中的最小数据移动。假设所有缓冲区都位于 L2 中，L2 在 NVIDIA 系统中充当跨 GPU 的一致性点 (point of coherency, PoC)。使用 SM (流式多处理器, streaming multiprocessor) 而非 CTA，以强调执行内存操作的硬件单元。
+
+
+
+
+In this section, we describe how the SoL lower bound can be estimated. We define the SoL as the minimal data movement required to complete the AllReduce while ignoring all other overheads, such as instruction scheduling and computation. Since small-message latency is determined by the transfer of the smallest unit handled by the memory system, we focus on the movement of a single 128-byte cache line.
+
+> 
+在本节中，我们描述如何估计光速 (SoL) 下界。我们将 SoL 定义为完成全归约 (AllReduce) 所需的最小数据移动 (data movement)，同时忽略所有其他开销 (overheads)，例如指令调度 (instruction scheduling) 和计算 (computation)。由于小消息延迟 (small-message latency) 由内存系统 (memory system) 处理的最小单元 (smallest unit) 的传输 (transfer) 决定，我们关注单个 128 字节缓存行 (cache line) 的移动。
+
+
+
+
+Fig. 10 illustrates the minimal data movements required for an AllReduce operation. Since remote stores are faster than remote loads and sufficient buffer space is assumed, the SoL bound corresponds to a one-shot push algorithm. The resulting data movement consists of the following components.
+
+> 
+图 10 展示了全归约 (AllReduce) 操作所需的最小数据移动。由于远程写入 (remote store) 比远程加载 (remote load) 更快，且假设有足够的缓冲区空间 (buffer space)，因此光速 (SoL) 下界对应于一次性推送 (one-shot push) 算法。由此产生的数据移动由以下组成部分构成。
+
+
+
+
+1 The first step loads the data into the SM register file. To obtain the lower bound, we assume an L2 cache hit, which is reasonable since the message sizes considered typically fit in L2. This load incurs one L2 RTT, denoted as ${L}_{\mathrm{L}2\_ \mathrm{{RTT}}}$ .
+
+> 
+1 第一步将数据加载到 SM 寄存器文件 (SM register file) 中。为了获得下界 (lower bound)，我们假设发生 L2 缓存命中 (L2 cache hit)，这是合理的，因为所考虑的消息大小 (message sizes) 通常能装入 L2。该加载会引入一次 L2 往返时间 (L2 RTT)，记为 ${L}_{\mathrm{L}2\_ \mathrm{{RTT}}}$。
+
+
+
+
+2 The data is then broadcast to the scratch buffers of all GPUs. For the SoL estimate, we assume that the stores to all peers are issued simultaneously. The data becomes visible in the remote GPU L2 cache after a latency of ${L}_{\text{ remote\_store }}$ . The cost of writing to the local scratch buffer is ignored because it is much smaller than the latency of remote stores.
+
+> 
+2 随后，数据被广播 (broadcast) 到所有 GPU 的暂存缓冲区 (scratch buffer) 中。对于 SoL 估计，我们假设对所有对等端 (peer) 的写操作 (store) 是同时发出的。数据在经历 ${L}_{\text{ remote\_store }}$ 的延迟 (latency) 后，在远程 GPU 的 L2 缓存 (L2 cache) 中变为可见。写入本地暂存缓冲区的开销被忽略，因为它远小于远程写操作 (remote store) 的延迟。
+
+
+
+
+3 Once the data arrives, it is immediately loaded from L2 into the SM. Assuming an L2 hit, this incurs another ${L}_{\mathrm{L}2\_ \text{ RTT. }}$ Contributions from all peers are assumed to arrive simultaneously and are fetched in parallel.
+
+> 
+3 一旦数据到达，它会立即从二级缓存 (L2) 加载到流式多处理器 (SM) 中。假设发生二级缓存命中 (L2 hit)，这会再引入 ${L}_{\mathrm{L}2\_ \text{ RTT. }}$ 的开销。假设来自所有对等方 (peer) 的贡献同时到达，并被并行获取。
+
+
+
+
+4 Reduction is performed inside the SM, and the result is written to the output buffer. The latency of this final store is not included because once the store instruction is issued, the memory system will finish the write in the background.
+
+> 
+4 归约 (Reduction) 在流式多处理器 (SM) 内执行，结果被写入输出缓冲区 (output buffer)。最终存储 (final store) 的延迟 (latency) 不计入，因为一旦存储指令 (store instruction) 发出，内存系统 (memory system) 就会在后台完成写入。
+
+
+
+
+Combining the components above, the SoL latency of an AllReduce can be expressed as
+
+> 
+综合以上组成部分，全归约 (AllReduce) 的 SoL 延迟可表示为
+
+
+
+
+$$
+{L}_{\mathrm{{SoL}}} = 2{L}_{\mathrm{L}2\_ \mathrm{{RTT}}} + {L}_{\text{ remote\_store }}.
+$$
+
+> 
+$$
+{L}_{\mathrm{{SoL}}} = 2{L}_{\mathrm{L}2\_ \mathrm{{RTT}}} + {L}_{\text{ remote\_store }}.
+$$
+
+
+
+
+Under the SoL assumption, sending data to $N$ peers incurs the same latency as sending to a single peer. Therefore, ${L}_{\mathbf{{SoL}}}$ represents an absolute lower bound that is independent of the number of ranks involved.
+
+> 
+在光速 (SoL) 假设下，向 $N$ 个对等节点 (peer) 发送数据与向单个对等节点发送数据具有相同的延迟 (latency)。因此，${L}_{\mathbf{{SoL}}}$ 表示一个绝对下界 (absolute lower bound)，其与所涉及的进程编号 (rank) 数量无关。
+
+
+
+
+To measure ${L}_{\mathrm{L}2\_ \mathrm{{RTT}}}$ , we benchmark the latency of a single ___threadfence ( ). This instruction enforces ordering and visibility at the L2 level, forcing the SM to wait until outstanding memory transactions reach the cache. Hence, its latency provides a good approximation of the L2 RTT.
+
+> 
+为了测量 ${L}_{\mathrm{L}2\_ \mathrm{{RTT}}}$，我们对单次 ___threadfence ( ) 的延迟进行了基准测试。该指令在 L2 级别强制保证顺序和可见性，迫使流式多处理器 (SM) 等待，直到未完成的内存事务到达缓存。因此，其延迟可以很好地近似 L2 往返时间 (RTT)。
+
+
+
+
+To estimate ${L}_{\text{ remote\_store }}$ , we measure the RTT when a single value is ping-ponged between two GPUs, which can be decomposed as ${L}_{\text{ ping\_pong }} = 2{L}_{\mathrm{L}2\_ \mathrm{{RTT}}} + 2{L}_{\text{ remote\_store }}$ . Each round-trip involves one remote store to the peer GPU and one remote store in the return direction, with an L2 access on both sides. Therefore, we can estimate ${L}_{\text{ remote\_store }}$ as
+
+> 
+为了估计 ${L}_{\text{ remote\_store }}$，我们测量单个值在两个 GPU 之间进行乒乓往返时的往返时间 (RTT)，其可分解为 ${L}_{\text{ ping\_pong }} = 2{L}_{\mathrm{L}2\_ \mathrm{{RTT}}} + 2{L}_{\text{ remote\_store }}$。每次往返都涉及一次到对等 GPU (peer GPU) 的远程存储 (remote store)，以及一次在返回方向上的远程存储 (remote store)，且两侧都有一次 L2 访问 (L2 access)。因此，我们可以将 ${L}_{\text{ remote\_store }}$ 估计为
+
+
+
+
+$$
+{L}_{\text{ remote\_store }} = \left( {{L}_{\text{ ping\_pong }} - 2{L}_{\mathrm{L}2\_ \mathrm{{RTT}}}}\right) /2.
+$$
+
+> 
+$$
+{L}_{\text{ remote\_store }} = \left( {{L}_{\text{ ping\_pong }} - 2{L}_{\mathrm{L}2\_ \mathrm{{RTT}}}}\right) /2.
+$$
+
+
+
+
+On two GB200, we measured the ${L}_{\mathrm{L}2\_ \mathrm{{RTT}}}$ and ${L}_{\text{ remote\_store }}$ as ${0.306\mu }\mathrm{s}$ and ${0.792\mu }\mathrm{s}$ , respectively. Therefore, the SoL latency of an AllReduce is computed to be $\mathbf{1.{404}}\mathbf{{\mu s}}$ .
+
+> 
+在两个 GB200 上，我们测得 ${L}_{\mathrm{L}2\_ \mathrm{{RTT}}}$ 和 ${L}_{\text{ remote\_store }}$ 分别为 ${0.306\mu }\mathrm{s}$ 和 ${0.792\mu }\mathrm{s}$。因此，一次全归约 (AllReduce) 的 SoL 延迟 (SoL latency) 经计算为 $\mathbf{1.{404}}\mathbf{{\mu s}}$。
+
+
+
+
+## VII. MICROBENCHMARKS
+
+## A. Experimental Setup
+
+We evaluate microbenchmarks on a GB200 NVL72 system, where 4 Blackwell GPUs reside within a node and 72 GPUs are connected within a single NVLink domain with 130 TB/s aggregate bandwidth. To ensure reproducibility, we use the NVIDIA vLLM container (v26.02) [42], which includes Ubuntu 24.04, CUDA 13.1, vLLM 0.15.1, PyTorch 2.11, and OpenMPI 4.1.9. Each experiment is repeated over 10 trials, and we report the mean. Error bars denote standard deviation and are typically too small to be visible.
+
+> 
+我们在 GB200 NVL72 系统上评估微基准测试 (microbenchmarks)，其中 4 个 Blackwell GPU 位于一个节点内，72 个 GPU 连接在单个 NVLink 域 (NVLink domain) 内，聚合带宽 (aggregate bandwidth) 为 130 TB/s。为确保可复现性 (reproducibility)，我们使用 NVIDIA vLLM 容器 (container)（v26.02）[42]，其包含 Ubuntu 24.04、CUDA 13.1、vLLM 0.15.1、PyTorch 2.11 和 OpenMPI 4.1.9。每个实验重复 10 次试验 (trials)，我们报告均值 (mean)。误差棒 (error bars) 表示标准差 (standard deviation)，且通常小到不可见。
+
+
+
+
+![Fig. 11: Top plot shows out-of-place AllReduce latency versus message size on GB200 for 2 to 64 GPUs. Each subplot shows the mean over 10 trials for AllReduce implementations from NCCL, NCCLX, NVSHMEM, MSCCL++, and vLLM. Shaded regions mark message sizes where one of our kernels is fastest, regardless of the synchronization mode: light green for LLBuffer one-shot, dark green for LLBuffer two-shot, and blue-gray for LL128 atomic. Labels within these regions report the geometric-mean speedup over the fastest existing implementation at each message size in the region. Dashed lines indicate multicast variants. Bottom plot shows the latency at 128B for selected one-shot kernels across GPU counts. The dashed horizontal line marks the measured SoL lower bound. Percentages report the overhead of each kernel relative to this bound.](images/fig10.jpg)
+
+Fig. 11: Top plot shows out-of-place AllReduce latency versus message size on GB200 for 2 to 64 GPUs. Each subplot shows the mean over 10 trials for AllReduce implementations from NCCL, NCCLX, NVSHMEM, MSCCL++, and vLLM. Shaded regions mark message sizes where one of our kernels is fastest, regardless of the synchronization mode: light green for LLBuffer one-shot, dark green for LLBuffer two-shot, and blue-gray for LL128 atomic. Labels within these regions report the geometric-mean speedup over the fastest existing implementation at each message size in the region. Dashed lines indicate multicast variants. Bottom plot shows the latency at 128B for selected one-shot kernels across GPU counts. The dashed horizontal line marks the measured SoL lower bound. Percentages report the overhead of each kernel relative to this bound.
+
+> 
+图 11：上图展示了在 GB200 上 2 到 64 个 GPU 的非原地全归约 (out-of-place AllReduce) 延迟 (latency) 随消息大小 (message size) 的变化。每个子图 (subplot) 展示了来自 NCCL、NCCLX、NVSHMEM、MSCCL++ 和 vLLM 的全归约 (AllReduce) 实现在 10 次试验 (trial) 上的平均值 (mean)。阴影区域 (Shaded regions) 标记了无论采用何种同步模式 (synchronization mode)，我们的某个内核 (kernel) 都能达到最快的消息大小：浅绿色表示 LLBuffer 单次 (one-shot)，深绿色表示 LLBuffer 两次 (two-shot)，蓝灰色表示 LL128 原子 (atomic)。这些区域内的标签 (Labels) 报告了在该区域内每个消息大小下相对于现有最快实现的几何平均加速比 (geometric-mean speedup)。虚线表示多播 (multicast) 变体。下图展示了在不同 GPU 数量下，所选单次 (one-shot) 内核在 128B 处的延迟。水平虚线标记了实测的光速 (SoL) 下界 (lower bound)。百分比表示每个内核相对于该下界的开销 (overhead)。
+
+
+
+
+![Fig. 12: Impact of scratch buffer size on AllReduce latency for our LLBuffer-based kernels on 2 nodes with 8 GB200. Vertical dashed lines indicate the minimum buffer size required for each kernel to process the full message in a single iteration.](images/fig11.jpg)
+
+Fig. 12: Impact of scratch buffer size on AllReduce latency for our LLBuffer-based kernels on 2 nodes with 8 GB200. Vertical dashed lines indicate the minimum buffer size required for each kernel to process the full message in a single iteration.
+
+> 
+图 12：在我们的基于 LLBuffer 的内核 (kernel) 上，暂存缓冲区 (scratch buffer) 大小对 2 个节点（共 8 块 GB200）上 AllReduce 延迟的影响。垂直虚线表示每个内核 (kernel) 在单次迭代中处理完整消息所需的最小缓冲区 (buffer) 大小。
+
+
+
+
+## B. Impact of Scratch Buffer
+
+Before benchmarking AllReduce latency, we first study the impact of scratch buffer capacity to determine practical default sizes for our kernels. Fig. 12 shows results for LLBuffer-based kernels on 8 GPUs with a 32 MiB message. All kernels use 64 CTAs with up to 512 threads per CTA.
+
+> 
+在基准测试全归约 (AllReduce) 延迟之前，我们首先研究暂存缓冲区 (scratch buffer) 容量的影响，以确定我们内核 (kernels) 的实用默认大小。图 12 展示了在 8 个 GPU 上使用 32 MiB 消息时基于 LLBuffer 的内核 (LLBuffer-based kernels) 的结果。所有内核 (kernels) 均使用 64 个协作线程阵列 (CTA)，每个 CTA 最多 512 个线程 (threads)。
+
+
+
+
+When the buffer is small $\left( { < 8\mathrm{{MiB}}}\right)$ , two-shot kernels are slower than one-shot kernels. Each iteration of the two-shot design requires two synchronization steps, which dominate latency. Although fewer iterations are needed overall, the additional synchronization cost outweighs this benefit. As the buffer size increases, the performance of two-shot kernels improves rapidly and then plateaus once the entire message fits within a single iteration. This indicates that, ideally, achieving the best performance for two-shot kernels requires a scratch buffer large enough to process the data in one iteration.
+
+> 
+当缓冲区 (buffer) 很小 $\left( { < 8\mathrm{{MiB}}}\right)$ 时，两阶段内核 (two-shot kernels) 比单阶段内核 (one-shot kernels) 更慢。两阶段 (two-shot) 设计的每次迭代 (iteration) 都需要两个同步步骤 (synchronization steps)，而这些同步步骤主导了延迟 (latency)。尽管总体上所需的迭代 (iteration) 次数更少，但额外的同步开销超过了这一收益。随着缓冲区 (buffer) 大小增加，两阶段内核 (two-shot kernels) 的性能迅速提升，随后一旦整个消息可容纳于单次迭代 (iteration) 中，就进入平台期。这表明，理想情况下，使两阶段内核 (two-shot kernels) 达到最佳性能需要一个足够大的暂存缓冲区 (scratch buffer)，以便在单次迭代 (iteration) 中处理数据。
+
+
+
+
+In one-shot kernels, every rank writes to all peers simultaneously, which means that increasing the buffer size increases the amount of data sent per iteration, which raises instantaneous bandwidth pressure on the NVLink fabric. Hence, beyond a certain point, increasing the scratch size provides little benefit and can even slightly degrade performance.
+
+> 
+在单次内核 (one-shot kernel) 中，每个进程 (rank) 同时写入所有对等方 (peer)，这意味着增大缓冲区大小 (buffer size) 会增加每次迭代发送的数据量，从而提高 NVLink 互连结构 (NVLink fabric) 上的瞬时带宽压力 (instantaneous bandwidth pressure)。因此，超过某一点后，增大暂存缓冲区大小 (scratch size) 几乎没有收益，甚至可能略微降低性能 (performance)。
+
+
+
+
+The LL128 atomic kernel is particularly attractive because it is both space efficient and fast. Instead of storing intermediate data from all ranks, it accumulates contributions directly into the destination buffer, significantly reducing the scratch space needed to process the entire message.
+
+> 
+LL128 原子内核 (atomic kernel) 尤其具有吸引力，因为它既节省空间又快速。它不存储来自所有 rank 的中间数据，而是直接将各 rank 的贡献累加到目标缓冲区 (destination buffer) 中，从而显著减少处理整条消息所需的暂存空间 (scratch space)。
+
+
+
+
+Based on these results, we select 4 MiB of scratch buffer for one-shot kernels, as they show limited benefit from larger buffers. For two-shot and LL128 atomic kernels, we choose 64 MiB as the default.
+
+> 
+基于这些结果，我们为单次内核 (one-shot kernels) 选择 4 MiB 的暂存缓冲区 (scratch buffer)，因为它们从更大缓冲区中获得的收益有限。对于两次内核 (two-shot kernels) 和 LL128 原子内核 (LL128 atomic kernels)，我们选择 64 MiB 作为默认值。
+
+
+
+
+## C. Latency
+
+With the scratch buffer size fixed, we perform a comprehensive evaluation across various data sizes and GPU counts. We compare our new low-latency kernels against the implementations from the state-of-the-art libraries and frameworks, including NCCL's legacy ring, tree algorithms, and symmetric memory kernels (v2.29.1), NVSHMEM (v3.5.21), MSCCL++ (v0.8.0), and vLLM custom AllReduce (v0.15.1). For all NCCL kernels, we used up to 64 CTAs with 512 threads per CTA. For other libraries, we used their default configurations.
+
+> 
+在暂存缓冲区 (scratch buffer) 大小固定的情况下，我们针对各种数据大小和 GPU 数量进行了全面评估。我们将新的低延迟内核 (low-latency kernel) 与来自最先进的库和框架的实现进行比较，包括 NCCL 的传统环形 (ring)、树形 (tree) 算法和对称内存 (symmetric memory) 内核（v2.29.1）、NVSHMEM（v3.5.21）、MSCCL++（v0.8.0）以及 vLLM 自定义全归约 (AllReduce)（v0.15.1）。对于所有 NCCL 内核，我们最多使用 64 个 CTA (Cooperative Thread Array)，每个 CTA 有 512 个线程。对于其他库，我们使用其默认配置。
+
+
+
+
+Results are shown in Fig. 11. In the bottom plot, we zoom in on the case where the message size is a single cache line, and compare the latency of different one-shot AllReduce implementations to the SoL bound. We only show the data for 32-bit floats, as the latency for 16-bit floats (i.e., float16 and bfloat16) is very similar.
+
+> 
+结果如图 11 所示。在底部图中，我们放大考察消息大小为单个缓存行 (cache line) 的情形，并将不同单次 (one-shot) AllReduce 实现的延迟 (latency) 与 SoL (speed-of-light) 下界进行比较。我们仅展示 32 位浮点数 (32-bit floats) 的数据，因为 16 位浮点数 (16-bit floats)（即 float16 和 bfloat16）的延迟非常相似。
+
+
+
+
+For NCCL, the AGxLL and RSxLD-AGxST kernels correspond to its latest one-shot and two-shot symmetric AllRe-duce algorithms, respectively. For NCCLX CTran, we use the ctdirect algorithm, which supports only single-node execution, so results are reported for 2 and 4 GPUs. The ring variant (ctring) is omitted, as it supports only one rank per node and is not optimized for low latency. The same single-node limitation applies to vLLM's custom AllReduce. Although MSCCL++ provides one-shot and two-shot AllReduce algorithms, including multicast variants, the multicast implementations consistently hang on GB200 and are excluded. The non-multicast variants are evaluated only on 2 and 4 GPUs, since multi-node collectives are not supported at the time of writing. A hierarchical AllReduce does exist for 2 nodes, but only with 8 GPUs per node. The two-shot algorithm also does not support 2 ranks or message sizes below $4\mathrm{{KiB}}$ , resulting in missing data points in the figure.
+
+> 
+对于 NCCL，AGxLL 和 RSxLD-AGxST 内核 (kernel) 分别对应该库最新的单次 (one-shot) 和双次 (two-shot) 对称全归约 (symmetric AllReduce) 算法。对于 NCCLX CTran，我们使用 ctdirect 算法；该算法仅支持单节点执行，因此结果仅针对 2 和 4 个 GPU 报告。环形变体 (ctring) 被省略，因为它每个节点仅支持一个 rank，且未针对低延迟 (low latency) 进行优化。同样的单节点限制也适用于 vLLM 的自定义全归约 (custom AllReduce)。尽管 MSCCL++ 提供了单次 (one-shot) 和双次 (two-shot) 全归约 (AllReduce) 算法，包括多播 (multicast) 变体，但多播实现会在 GB200 上持续挂起，因此被排除。非多播 (non-multicast) 变体仅在 2 和 4 个 GPU 上评估，因为在撰写时还不支持多节点集合通信 (multi-node collectives)。针对 2 个节点的分层全归约 (hierarchical AllReduce) 确实存在，但仅支持每个节点 8 个 GPU。双次 (two-shot) 算法也不支持 2 个 rank 或小于 $4\mathrm{{KiB}}$ 的消息大小，导致图中缺失一些数据点。
+
+
+
+
+Based on the results, we make the following observations:
+
+> 
+基于结果，我们得出以下观察：
+
+
+
+
+a) Observation 1: Our LLBuffer-based one-shot AllReduce achieves the lowest latency for small messages across all GPU counts. As shown in Fig. 11, our kernels incur only about $7\%$ overhead over the SoL bound at 2 GPUs, while competing implementations remain noticeably farther away. Even at 64 GPUs, multicast one-shot variants stay within roughly 70% overhead of the SoL bound. While NCCL AGxLL and MSCCL++ also use LL-style synchronization, our implementation benefits from targeted optimizations including aggressive compile-time unrolling and parallel polling and reduction across ranks, which reduce detection and accumulation latency. We also observe a crossover between LL and sentinel synchronization. LL performs slightly better at very small sizes, whereas sentinel becomes preferable as message size and rank count increase, avoiding the flag overhead of LL.
+
+> 
+a) 观察 1：我们基于 LLBuffer 的单次全归约 (AllReduce) 在所有 GPU 数量下对小消息都实现了最低延迟。如图 11 所示，在 2 个 GPU 上，我们的内核相较于 SoL 下界 (SoL bound) 仅带来约 $7\%$ 的开销，而竞争实现距离该下界仍明显更远。即使在 64 个 GPU 上，多播 (multicast) 单次变体也保持在 SoL 下界约 70% 的开销以内。尽管 NCCL AGxLL 和 MSCCL++ 也使用 LL 风格同步，我们的实现受益于有针对性的优化，包括激进的编译期展开以及跨 rank 的并行轮询与归约 (reduction)，这些优化降低了检测和累积延迟。我们还观察到 LL 与哨兵 (sentinel) 同步之间的交叉点。LL 在非常小的尺寸下略优，而随着消息大小和 rank 数量增加，哨兵变得更为可取，从而避免了 LL 的标志开销。
+
+
+
+
+b) Observation 2: When the number of GPUs is small, the advantage of the LL128 atomic kernel over the standard two-shot design is limited. L2 atomic operations incur slightly higher latency due to serialization compared to accumulating values in the scratch buffer. As the number of GPUs increases, however, the scalability of atomic operations becomes more apparent, allowing the LL128 kernel to outperform two-shot kernels over a wider range of small and medium message sizes.
+
+> 
+b) 观察 2：当 GPU 数量较少时，LL128 原子内核 (LL128 atomic kernel) 相较于标准双阶段设计 (standard two-shot design) 的优势有限。与在暂存缓冲区 (scratch buffer) 中累加数值相比，L2 原子操作 (L2 atomic operations) 由于串行化 (serialization) 会带来略高的延迟 (latency)。然而，随着 GPU 数量的增加，原子操作的可扩展性 (scalability) 变得更加明显，使得 LL128 内核 (LL128 kernel) 在更广泛的中小消息大小 (small and medium message sizes) 范围内优于双阶段内核 (two-shot kernels)。
+
+
+
+
+c) Observation 3: At small scale, hardware multicast may incur slight overhead compared to unicast, but it plays a key role in improving collective scalability. The kernels that outperform our LLBuffer-based designs are primarily multicast variants that leverage the multimem. 1d_reduce instruction to combine contributions across ranks. This greatly reduces both the number of explicit memory operations and the amount of software-managed reduction. The benefit becomes more pronounced at larger scales, where offloading reduction to the NVLink/NVSwitch fabric is particularly effective [43].
+
+> 
+c) 观察 3：在小规模下，与单播 (unicast) 相比，硬件多播 (hardware multicast) 可能引入轻微开销，但它在提升集合通信可扩展性 (collective scalability) 方面起着关键作用。那些性能优于我们基于 LLBuffer 的设计 (LLBuffer-based designs) 的内核 (kernels) 主要是多播变体 (multicast variants)，它们利用 multimem. 1d_reduce 指令来合并跨 rank 的贡献。这极大地减少了显式内存操作 (explicit memory operations) 的数量以及软件管理的归约量 (software-managed reduction)。在更大规模下，收益变得更加显著，此时将归约卸载到 NVLink/NVSwitch 互连结构 (fabric) 上尤其有效 [43]。
+
+
+
+
+From the microbenchmarks, we observe that the proposed LLBuffer-based kernels cannot fully replace the existing symmetric kernel, namely the two-shot RSxLD-AGxST, as their polling overhead increases with GPU count and message size. However, they significantly reduce latency for small to medium messages, approaching the hardware limit, thereby complementing existing kernels.
+
+> 
+从微基准测试 (microbenchmarks) 中，我们观察到，所提出的基于 LLBuffer 的内核 (LLBuffer-based kernels) 无法完全替代现有的对称内核 (symmetric kernel)，即 two-shot RSxLD-AGxST，因为它们的轮询开销 (polling overhead) 会随着 GPU 数量 (GPU count) 和消息大小 (message size) 的增加而增加。然而，它们显著降低了中小型消息 (small to medium messages) 的延迟 (latency)，使其接近硬件极限 (hardware limit)，从而与现有内核 (existing kernels) 形成互补。
+
+
+
+
+## VIII. CASE STUDIES
+
+After extensively benchmarking the kernels, we modify NCCL to select the best-performing low-latency algorithm based on the collected empirical results. For example, at 4 ranks, messages below 1 MiB use one-shot kernels, while those between 1 and 2 MiB use two-shot kernels. In this section, we evaluate the impact of these selections on two target workloads, LLM inference and cuSOLVERMp.
+
+> 
+在对这些内核 (kernel) 进行广泛基准测试 (benchmarking) 之后，我们修改 NCCL，以根据收集到的经验结果选择性能最佳的低延迟算法 (low-latency algorithm)。例如，在 4 个秩 (rank) 下，小于 1 MiB 的消息使用单次内核 (one-shot kernel)，而介于 1 和 2 MiB 之间的消息使用两次内核 (two-shot kernel)。在本节中，我们评估这些选择对两个目标工作负载 (workload)——大语言模型 (LLM) 推理和 cuSOLVERMp——的影响。
+
+
+
+
+### A.LLM Inference
+
+For LLM inference, we conduct experiments on the same NVL72 GB200 system described earlier, using the same NVIDIA vLLM container from Section VII. We select vLLM as the inference framework due to its wide adoption and active development [3], [44], [45]. Experiments are conducted on several popular open-weight LLMs under two configurations: 1 node with 4 GPUs (TP=4) and 2 nodes with 8 GPUs (TP=8).
+
+> 
+对于 LLM 推理 (inference)，我们在前文描述的同一 NVL72 GB200 系统上进行实验，并使用第 VII 节中相同的 NVIDIA vLLM 容器 (container)。我们选择 vLLM 作为推理框架 (inference framework)，因为它被广泛采用且开发活跃 [3], [44], [45]。实验在若干流行的开放权重 LLM (open-weight LLM) 上、在两种配置 (configuration) 下进行：1 个节点 (node) 配 4 个 GPU (TP=4)，以及 2 个节点 (node) 配 8 个 GPU (TP=8)。
+
+
+
+
+For all models, we use long input contexts of 100-200k tokens and generate 16K output tokens, with a batch size of 8 to emulate long-context inference scenarios. This choice reflects the growing importance of long-context workloads in practice [46]-[49]. Each setting is evaluated over 5 trials with vLLM's serving benchmark. We present the results in Fig. 13.
+
+> 
+对于所有模型，我们使用 100-200k 个词元 (token) 的长输入上下文 (long input contexts)，并生成 16K 个输出词元 (output tokens)，批大小 (batch size) 为 8，以模拟长上下文推理场景 (long-context inference scenarios)。这一选择反映了长上下文工作负载 (long-context workloads) 在实践中日益增长的重要性 [46]-[49]。每个设置均使用 vLLM 的服务基准测试 (serving benchmark) 在 5 次试验 (trials) 上进行评估。我们在图 13 中给出结果。
+
+
+
+
+We evaluate several configurations against the NCCL baseline using only legacy kernels. NCCL LL employs the proposed LLBuffer-based one-shot kernels, while No MC disables NVLS multicast. Sym Mem enables PyTorch symmetric memory, registering input and output buffers as symmetric memory to unlock NCCL's two-shot and LL128 atomic kernels. Without it, AllReduce is limited to one-shot LL kernels and falls back to legacy implementations beyond the LL threshold. We report vLLM custom AllReduce and MSCCL++ only for the single-node case, since both are restricted to single-node execution as mentioned previously.
+
+> 
+我们仅使用传统内核 (legacy kernels)，以 NCCL 基线 (baseline) 为对照评估了若干配置 (configurations)。NCCL LL 采用所提出的基于 LLBuffer 的单次内核 (one-shot kernels)，而 No MC 则禁用 NVLS 多播 (multicast)。Sym Mem 启用 PyTorch 对称内存 (symmetric memory)，将输入和输出缓冲区 (buffers) 注册为对称内存 (symmetric memory)，以解锁 NCCL 的两次内核 (two-shot kernels) 和 LL128 原子内核 (atomic kernels)。在没有它的情况下，全归约 (AllReduce) 仅限于单次 LL 内核 (one-shot LL kernels)，并在超过 LL 阈值 (threshold) 时回退到传统实现 (legacy implementations)。我们仅针对单节点情形 (single-node case) 报告 vLLM 自定义全归约 (AllReduce) 和 MSCCL++，因为如前所述，二者均受限于单节点执行 (single-node execution)。
+
+
+
+
+Across all models, low-latency kernels consistently improve performance. The best configuration reduces ITL by 7-13% on 4 GPUs and 9-11% on 8 GPUs, with similar gains in throughput. Results hold across diverse model architectures, including dense (Llama), mixture-of-experts (DeepSeek), and hybrid attention (Qwen3-Next). NCCL LL alone performs well because decode steps involve small AllReduce operations, where one-shot LLBuffer kernels approach the SoL bound. Sym Mem provides additional gains by enabling more efficient two-shot kernels for larger messages, particularly in vLLM's mixed prefill/decode execution where some operations exceed the LL threshold. The benefit is more pronounced in throughput than ITL, as throughput measures total generated tokens over wall-clock time and thus captures improvements across the entire generation process, including prefill.
+
+> 
+在所有模型上，低延迟内核 (low-latency kernels) 均能持续提升性能。最佳配置在 4 个 GPU 上将词元间延迟 (ITL) 降低 7-13%，在 8 个 GPU 上降低 9-11%，吞吐量 (throughput) 也有类似提升。该结果在不同模型架构 (model architectures) 上均成立，包括稠密 (dense) 模型 (Llama)、专家混合 (mixture-of-experts) 模型 (DeepSeek) 和混合注意力 (hybrid attention) 模型 (Qwen3-Next)。仅 NCCL LL 本身就表现良好，因为解码 (decode) 步骤涉及小型全归约 (AllReduce) 操作，其中单次 (one-shot) LLBuffer 内核可逼近速度极限下界 (SoL bound)。对称内存 (Sym Mem) 通过为更大消息启用更高效的两次 (two-shot) 内核，带来额外收益，尤其是在 vLLM 的混合预填充/解码 (prefill/decode) 执行中，其中一些操作超过 LL 阈值 (LL threshold)。这种收益在吞吐量上比在 ITL 上更明显，因为吞吐量衡量的是墙钟时间 (wall-clock time) 内生成的总词元数，因此能捕捉整个生成过程（包括预填充 (prefill)）中的改进。
+
+
+
+
+![Fig. 13: Effect of low-latency collectives on vLLM inference. Rows report mean inter-token latency (ITL), output throughput, and estimated cost savings per 1M output tokens relative to the baseline. Percentages show the improvement over the baseline. Green labels highlight the best-performing configuration for each model. Green arrows indicate the direction of improvement.](images/fig12.jpg)
+
+Fig. 13: Effect of low-latency collectives on vLLM inference. Rows report mean inter-token latency (ITL), output throughput, and estimated cost savings per 1M output tokens relative to the baseline. Percentages show the improvement over the baseline. Green labels highlight the best-performing configuration for each model. Green arrows indicate the direction of improvement.
+
+> 
+图 13：低延迟集合通信 (low-latency collectives) 对 vLLM 推理 (vLLM inference) 的影响。各行报告平均 token 间延迟 (Inter-Token Latency, ITL)、输出吞吐量 (output throughput)，以及相对于基线 (baseline) 的每 1M 输出 token 的估计成本节省 (estimated cost savings)。百分比显示相对于基线的改进。绿色标签突出显示每个模型性能最佳的配置 (best-performing configuration)。绿色箭头指示改进方向。
+
+
+
+
+We estimate cost savings by converting output throughput into dollars per 1M tokens using CoreWeave's GB200 pricing [8]. For hourly price $p$ and output throughput $r$ , the estimated cost is $p \cdot  {10}^{6}/\left( {3600r}\right)$ . We recognize that production serving is often disaggregated [50], [51], with separate node pools for prefill and decode, so this is not a full deployment cost model. Rather, it is an estimate of the savings attributable to faster collectives. Under this estimate, gains exceed \$11 per 1M output tokens in the 8-GPU setting for large models such as DeepSeek V3. In the 4-GPU case, although per-token savings are smaller, they accumulate into meaningful cost reductions for decode-heavy workloads at production scale.
+
+> 
+我们通过使用 CoreWeave 的 GB200 定价 [8]，将输出吞吐量 (output throughput) 转换为每 1M token 的美元数，从而估算成本节约 (cost savings)。对于每小时价格 $p$ 和输出吞吐量 (output throughput) $r$ ，估计成本为 $p \cdot  {10}^{6}/\left( {3600r}\right)$ 。我们认识到，生产服务 (production serving) 通常被解聚 (disaggregated) [50], [51]，即为预填充 (prefill) 和解码 (decode) 使用单独的节点池 (node pools)，因此这并不是完整的部署成本模型 (deployment cost model)。相反，它是对更快集合通信 (collectives) 所带来的节约的估计。根据这一估计，在 8-GPU 设置下，对于 DeepSeek V3 等大模型，收益超过每 1M 输出 token \$11。在 4-GPU 情况下，尽管每 token 的节约较小，但在生产规模 (production scale) 的解码密集型 (decode-heavy) 工作负载中，它们会累积成有意义的成本降低。
+
+
+
+
+## B. Traditional HPC
+
+To evaluate a representative traditional HPC workload, we use cuSOLVERMp. Many production GPU-accelerated applications, including GROMACS and LAMMPS, still rely on MPI or CUDA-aware MPI rather than NCCL [17], [52]-[55]. Although QMCPACK [56] exposes NCCL support, it is limited to the Auxiliary-Field Quantum Monte Carlo (AFQMC) method and is not well maintained [57], so we exclude it. NVIDIA HPCG, the High Performance Conjugate Gradients benchmark adapted to use NCCL, is a potential alternative but is also excluded as it relies exclusively on point-to-point communication [58]. We therefore use cuSOLVERMp, NVIDIA's distributed dense linear algebra library [59], as a practical
+
+> 
+为了评估一种具有代表性的传统高性能计算 (HPC) 工作负载，我们使用 cuSOLVERMp。许多生产级图形处理器 (GPU) 加速应用，包括 GROMACS 和 LAMMPS，仍然依赖消息传递接口 (MPI) 或 CUDA 感知的 MPI (CUDA-aware MPI)，而不是 NVIDIA 集合通信库 (NCCL) [17], [52]-[55]。尽管 QMCPACK [56] 提供了 NCCL 支持，但它仅限于辅助场量子蒙特卡洛 (Auxiliary-Field Quantum Monte Carlo, AFQMC) 方法，并且维护不佳 [57]，因此我们将其排除。NVIDIA HPCG，即适配使用 NCCL 的高性能共轭梯度 (High Performance Conjugate Gradients) 基准，是一个潜在的替代方案，但也因其完全依赖点对点通信 (point-to-point communication) [58] 而被排除。因此，我们使用 cuSOLVERMp——NVIDIA 的分布式稠密线性代数库 (distributed dense linear algebra library) [59]——作为一种实用的
+
+
+
+
+case study. Its generalized symmetric-definite eigensolvers are widely used in electronic-structure workloads [60].
+
+> 
+案例研究。其广义对称正定特征求解器 (generalized symmetric-definite eigensolvers) 广泛用于电子结构工作负载 (electronic-structure workloads) [60]。
+
+
+
+
+![Fig. 14: Performance of mp_sygvd with and without the new low-latency kernels. Bars show mean GFLOPS per GPU over 5 trials, with error bars indicating standard deviation. Percentage annotations show the improvement over the baseline.](images/fig13.jpg)
+
+Fig. 14: Performance of mp_sygvd with and without the new low-latency kernels. Bars show mean GFLOPS per GPU over 5 trials, with error bars indicating standard deviation. Percentage annotations show the improvement over the baseline.
+
+> 
+图14：使用和不使用新的低延迟内核 (low-latency kernels) 时 mp_sygvd 的性能。柱状条 (bar) 显示 5 次试验中每 GPU (GPU) 的平均 GFLOPS，误差条 (error bar) 表示标准差 (standard deviation)。百分比标注 (percentage annotation) 显示相对于基线 (baseline) 的提升。
+
+
+
+
+The experiments were conducted on the Alps supercomput-ing cluster. Each Alps node is equipped with four NVIDIA Grace Hopper Superchips (GH200) connected via 150 GB/s NVLink for intra-node communication [10], [61]. As Alps does not provide an NVSwitch-based scale-up fabric across multiple nodes, we restrict this study to a single node. We chose this platform over GB200 as it reflects a more accessible system for domain scientists. Experiments were performed in NVIDIA's PyTorch container (v25.10) running Ubuntu 24.04, CUDA 12.6, OpenMPI 4.1.7, and cuSOLVERMp 0.7.2. In our setup, larger matrix sizes $\left( {m = {32768}\text{ and }m = {65536}}\right)$ exceed single-GPU memory capacity and are therefore executed in distributed mode. We exclude MSCCL++ from this comparison due to MPI errors and compare only against the NCCL baseline using legacy kernels.
+
+> 
+实验在 Alps 超级计算集群 (Alps supercomputing cluster) 上进行。每个 Alps 节点 (node) 配备四个 NVIDIA Grace Hopper 超级芯片 (Grace Hopper Superchips, GH200)，通过 150 GB/s 的 NVLink 进行节点内通信 (intra-node communication) [10], [61]。由于 Alps 不提供跨多个节点 (multiple nodes) 的基于 NVSwitch 的扩展互连网络 (scale-up fabric)，我们将本研究限制在单节点 (single node) 内。我们选择该平台 (platform) 而非 GB200，是因为它代表着一种对领域科学家 (domain scientists) 而言更易获取的系统。实验在 NVIDIA 的 PyTorch 容器 (PyTorch container)（v25.10）中进行，该容器运行 Ubuntu 24.04、CUDA 12.6、OpenMPI 4.1.7 和 cuSOLVERMp 0.7.2。在我们的配置 (setup) 中，较大的矩阵规模 (matrix sizes) $\left( {m = {32768}\text{ and }m = {65536}}\right)$ 超出单 GPU 内存容量 (single-GPU memory capacity)，因此以分布式模式 (distributed mode) 执行。由于 MPI 错误 (MPI errors)，我们将 MSCCL++ 排除在此比较 (comparison) 之外，并仅与使用传统内核 (legacy kernels) 的 NCCL 基线 (baseline) 进行比较。
+
+
+
+
+Figure 14 shows that the proposed low-latency kernels consistently improve cuSOLVERMp across the two configurations. The gains are more pronounced for $m = {32768}$ , where communication constitutes a larger fraction of runtime. Note that cuSOLVERMp does not register buffers as symmetric memory, so only one-shot kernels were used for message sizes below 1 MiB. Overall, these results indicate that low-latency collectives benefit not only LLM inference but also traditional HPC workloads as NCCL-based communication becomes more widely adopted.
+
+> 
+图 14 显示，所提出的低延迟内核 (low-latency kernels) 在两种配置下均能持续提升 cuSOLVERMp。对于 $m = {32768}$，增益更为显著，因为通信在运行时中占据更大比例。注意，cuSOLVERMp 不将缓冲区注册为对称内存 (symmetric memory)，因此对于小于 1 MiB 的消息大小，仅使用了单次内核 (one-shot kernels)。总体而言，这些结果表明，随着基于 NCCL 的通信 (NCCL-based communication) 得到更广泛采用，低延迟集合通信 (low-latency collectives) 不仅能使 LLM 推理 (LLM inference) 受益，也能使传统高性能计算工作负载 (traditional HPC workloads) 受益。
+
+
+
+
+## IX. RELATED WORK AND DISCUSSION
+
+We are aware that several frameworks and communication libraries also provide low-latency AllReduce implementations, such as SGLang [5] and FlashInfer [62]. These are not included in our microbenchmark comparison, as their designs largely resemble the custom AllReduce in vLLM, and therefore exhibit similar performance characteristics. In TensorRT-LLM [6], AllReduce variants based on sentinel-style synchronization are available, but they still rely on global barrier flags for coordination, which introduces additional overhead compared to our designs.
+
+> 
+我们注意到，若干框架 (framework) 和通信库 (communication library) 也提供了低延迟全归约 (AllReduce) 实现，例如 SGLang [5] 和 FlashInfer [62]。这些实现未纳入我们的微基准测试 (microbenchmark) 比较，因为它们的设计在很大程度上类似于 vLLM 中的自定义全归约 (AllReduce)，因此表现出相似的性能特征。在 TensorRT-LLM [6] 中，已有基于哨兵式同步 (sentinel-style synchronization) 的全归约 (AllReduce) 变体可用，但它们仍依赖全局屏障标志 (global barrier flags) 进行协调 (coordination)，相比我们的设计会引入额外开销。
+
+
+
+
+There also exist libraries such as DeepEP [63] and NCCL EP [64] that provide low-latency primitives tailored for expert parallel workloads. These optimizations target a narrower class of communication patterns and do not generalize to other workloads. In contrast, our API is general-purpose and can be used to implement similar functionality when needed.
+
+> 
+还存在诸如 DeepEP [63] 和 NCCL EP [64] 之类的库 (libraries)，它们为专家并行工作负载 (expert parallel workloads) 提供量身定制的低延迟原语 (low-latency primitives)。这些优化针对的是一类更窄的通信模式 (communication patterns)，并且不能推广到其他工作负载。相比之下，我们的 API 是通用的 (general-purpose)，可以在需要时用于实现类似功能。
+
+
+
+
+We do not compare against NIXL [65], as it targets a different design space. NIXL is primarily a transport and orchestration layer for GPU communication, focusing on scheduling and integration across heterogeneous backends rather than optimizing the latency of collectives.
+
+> 
+我们未与NIXL [65]进行比较，因为它面向不同的设计空间。NIXL主要是GPU通信的传输与编排层 (transport and orchestration layer)，侧重于跨异构后端 (heterogeneous backends)的调度与集成，而非优化集合通信 (collectives)的延迟。
+
+
+
+
+There are several directions for future work. First, kernel selection is currently driven by empirical measurements and could be improved with an accurate performance model. Developing such a model would require detailed knowledge of GPU architecture, including factors such as warp scheduling and instruction-level behavior, which is beyond the scope of this work. Second, the current API design focuses on thread-level primitives to maximize performance. Future extensions could provide warp- or block-level abstractions with fewer constraints and improve usability.
+
+> 
+未来工作有几个方向。第一，内核选择 (kernel selection) 目前由经验性测量 (empirical measurements) 驱动，并可通过准确的性能模型 (performance model) 加以改进。开发这样的模型需要详细了解 GPU 架构 (GPU architecture)，包括线程束调度 (warp scheduling) 和指令级行为 (instruction-level behavior) 等因素，这超出了本文的范围。第二，当前的应用程序接口设计 (API design) 侧重于线程级原语 (thread-level primitives) 以最大化性能。未来的扩展可以提供约束更少的线程束级或线程块级抽象 (warp- or block-level abstractions)，并提高易用性 (usability)。
+
+
+
+
+## X. CONCLUSION
+
+In this work, we studied how to approach the absolute hardware lower bound for scale-up GPU collectives within a single NVLink domain and identified key principles for low-latency design. Building on NCCL's device-side APIs, we introduced a new set of APIs that simplify the construction of custom low-latency collective kernels. Using these APIs, we implemented several new AllReduce kernels that substantially reduce latency for small and medium messages, bringing SoL overhead down to about 7% in the best case and consistently outperforming state-of-the-art frameworks. In vLLM inference, the best configuration reduces ITL by up to 13% on 4 GPUs and 11% on 8 GPUs across diverse LLMs, with similar throughput gains and estimated savings of more than \$11 per million output tokens for a large model such as DeepSeek-V3. We also observe consistent single-node speedups for cu-SOLVERMp on the Alps supercomputer. Overall, these results demonstrate that low-latency optimization delivers measurable benefits in both AI inference and traditional HPC applications, and that the proposed APIs provide a practical foundation for building latency-critical collective kernels.
+
+> 
+在这项工作中，我们研究了如何在单个 NVLink 域 (NVLink domain) 内逼近纵向扩展 (scale-up) GPU 集合通信 (collective communication) 的绝对硬件下界 (absolute hardware lower bound)，并确定了低时延设计 (low-latency design) 的关键原则。基于 NCCL 的设备端 API (device-side API)，我们引入了一组新 API，可简化自定义低时延集合通信内核 (custom low-latency collective kernel) 的构建。利用这些 API，我们实现了若干新的全归约 (AllReduce) 内核，显著降低小消息和中消息 (small and medium message) 的时延，在最佳情况下将速度极限 (SoL) 开销降至约 7%，并持续优于最先进框架 (state-of-the-art framework)。在 vLLM 推理 (vLLM inference) 中，在多种大语言模型 (LLM) 上，最佳配置在 4 个 GPU 上将令牌间时延 (ITL, inter-token latency) 最多降低 13%，在 8 个 GPU 上最多降低 11%，同时具有类似的吞吐量 (throughput) 提升，并且对于 DeepSeek-V3 等大模型，估计每百万输出词元 (output token) 可节省超过 \$11。我们还在 Alps 超级计算机 (Alps supercomputer) 上观察到 cu-SOLVERMp 的一致单节点加速 (single-node speedup)。总体而言，这些结果表明，低时延优化 (low-latency optimization) 在 AI 推理 (AI inference) 与传统高性能计算 (HPC) 应用中都能带来可衡量的收益，并且所提出的 API 为构建时延关键型集合通信内核 (latency-critical collective kernel) 提供了实用基础。
+
+
+
+
+## XI. ACKNOWLEDGMENTS
+
+The authors thank Andrei Ivanov for his invaluable assistance in collecting the experimental data. This work would not have been possible without his support. The research was conducted as part of the FastTrackAI project at the Singapore-ETH Centre, which was established collaboratively between ETH Zurich and the National Research Foundation, Singapore. This research is supported by the National Research Foundation, Singapore (NRF), and the Ministry of Digital Development and Information (MDDI) under the AI Visiting Professorship (Award No. AIVP-2025-005). This work also received funding from the European Research Council (Project PSAP, No. 101002047). The authors used ChatGPT-5.4 [66] to assist with light editing and proofreading. All content and ideas remain the original work of the authors.
+
+> 
+作者感谢 Andrei Ivanov 在收集实验数据方面提供的宝贵协助。若没有他的支持，这项工作本不可能完成。本研究是新加坡-ETH中心（Singapore-ETH Centre）FastTrackAI 项目的一部分，该中心由苏黎世联邦理工学院（ETH Zurich）与新加坡国家研究基金会（National Research Foundation, Singapore）合作建立。本研究由新加坡国家研究基金会（National Research Foundation, Singapore, NRF）和数字发展与信息部（Ministry of Digital Development and Information, MDDI）在 AI 访问教授（AI Visiting Professorship）项目下提供支持（奖项编号：AIVP-2025-005）。本工作还获得了欧洲研究理事会（European Research Council）的资助（项目 PSAP，编号 101002047）。作者使用 ChatGPT-5.4 [66] 协助进行轻度编辑和校对。所有内容和观点仍为作者的原创工作。
+
+
+
+
+## REFERENCES
+
+[1] DeepSeek-AI, A. Liu, B. Feng, B. Xue, B. Wang, B. Wu, C. Lu, C. Zhao, C. Deng, C. Zhang, C. Ruan, D. Dai, D. Guo, D. Yang, D. Chen, D. Ji, E. Li, F. Lin, F. Dai, F. Luo, G. Hao, G. Chen, G. Li, H. Zhang, H. Bao, H. Xu, H. Wang, H. Zhang, H. Ding, H. Xin, H. Gao, H. Li, H. Qu, J. L. Cai, J. Liang, J. Guo, J. Ni, J. Li, J. Wang, J. Chen, J. Chen, J. Yuan, J. Qiu, J. Li, J. Song, K. Dong, K. Hu, K. Gao, K. Guan, K. Huang, K. Yu, L. Wang, L. Zhang, L. Xu, L. Xia, L. Zhao, L. Wang, L. Zhang, M. Li, M. Wang, M. Zhang, M. Zhang, M. Tang, M. Li, N. Tian, P. Huang, P. Wang, P. Zhang, Q. Wang, Q. Zhu, Q. Chen, Q. Du, R. J. Chen, R. L. Jin, R. Ge, R. Zhang, R. Pan, R. Wang, R. Xu, R. Zhang, R. Chen, S. S. Li, S. Lu, S. Zhou, S. Chen, S. Wu, S. Ye, S. Ye, S. Ma, S. Wang, S. Zhou, S. Yu, S. Zhou, S. Pan, T. Wang, T. Yun, T. Pei, T. Sun, W. L. Xiao, W. Zeng, W. Zhao, W. An, W. Liu, W. Liang, W. Gao, W. Yu, W. Zhang, X. Q. Li, X. Jin, X. Wang, X. Bi, X. Liu, X. Wang, X. Shen, X. Chen, X. Zhang, X. Chen, X. Nie, X. Sun, X. Wang, X. Cheng, X. Liu, X. Xie, X. Liu, X. Yu, X. Song, X. Shan, X. Zhou, X. Yang, X. Li, X. Su, X. Lin, Y. K. Li, Y. Q. Wang, Y. X. Wei, Y. X. Zhu, Y. Zhang, Y. Xu, Y. Xu, Y. Huang, Y. Li, Y. Zhao, Y. Sun, Y. Li, Y. Wang, Y. Yu, Y. Zheng, Y. Zhang, Y. Shi, Y. Xiong, Y. He, Y. Tang, Y. Piao, Y. Wang, Y. Tan, Y. Ma, Y. Liu, Y. Guo, Y. Wu, Y. Ou, Y. Zhu, Y. Wang, Y. Gong, Y. Zou, Y. He, Y. Zha, Y. Xiong, Y. Ma, Y. Yan, Y. Luo, Y. You, Y. Liu, Y. Zhou, Z. F. Wu, Z. Z. Ren, Z. Ren, Z. Sha, Z. Fu, Z. Xu, Z. Huang, Z. Zhang, Z. Xie, Z. Zhang, Z. Hao, Z. Gou, Z. Ma, Z. Yan, Z. Shao, Z. Xu, Z. Wu, Z. Zhang, Z. Li, Z. Gu, Z. Zhu, Z. Liu, Z. Li, Z. Xie, Z. Song, Z. Gao, and Z. Pan, "Deepseek-v3 technical report," 2025.
+
+> 
+[1] DeepSeek-AI, A. Liu, B. Feng, B. Xue, B. Wang, B. Wu, C. Lu, C. Zhao, C. Deng, C. Zhang, C. Ruan, D. Dai, D. Guo, D. Yang, D. Chen, D. Ji, E. Li, F. Lin, F. Dai, F. Luo, G. Hao, G. Chen, G. Li, H. Zhang, H. Bao, H. Xu, H. Wang, H. Zhang, H. Ding, H. Xin, H. Gao, H. Li, H. Qu, J. L. Cai, J. Liang, J. Guo, J. Ni, J. Li, J. Wang, J. Chen, J. Chen, J. Yuan, J. Qiu, J. Li, J. Song, K. Dong, K. Hu, K. Gao, K. Guan, K. Huang, K. Yu, L. Wang, L. Zhang, L. Xu, L. Xia, L. Zhao, L. Wang, L. Zhang, M. Li, M. Wang, M. Zhang, M. Zhang, M. Tang, M. Li, N. Tian, P. Huang, P. Wang, P. Zhang, Q. Wang, Q. Zhu, Q. Chen, Q. Du, R. J. Chen, R. L. Jin, R. Ge, R. Zhang, R. Pan, R. Wang, R. Xu, R. Zhang, R. Chen, S. S. Li, S. Lu, S. Zhou, S. Chen, S. Wu, S. Ye, S. Ye, S. Ma, S. Wang, S. Zhou, S. Yu, S. Zhou, S. Pan, T. Wang, T. Yun, T. Pei, T. Sun, W. L. Xiao, W. Zeng, W. Zhao, W. An, W. Liu, W. Liang, W. Gao, W. Yu, W. Zhang, X. Q. Li, X. Jin, X. Wang, X. Bi, X. Liu, X. Wang, X. Shen, X. Chen, X. Zhang, X. Chen, X. Nie, X. Sun, X. Wang, X. Cheng, X. Liu, X. Xie, X. Liu, X. Yu, X. Song, X. Shan, X. Zhou, X. Yang, X. Li, X. Su, X. Lin, Y. K. Li, Y. Q. Wang, Y. X. Wei, Y. X. Zhu, Y. Zhang, Y. Xu, Y. Xu, Y. Huang, Y. Li, Y. Zhao, Y. Sun, Y. Li, Y. Wang, Y. Yu, Y. Zheng, Y. Zhang, Y. Shi, Y. Xiong, Y. He, Y. Tang, Y. Piao, Y. Wang, Y. Tan, Y. Ma, Y. Liu, Y. Guo, Y. Wu, Y. Ou, Y. Zhu, Y. Wang, Y. Gong, Y. Zou, Y. He, Y. Zha, Y. Xiong, Y. Ma, Y. Yan, Y. Luo, Y. You, Y. Liu, Y. Zhou, Z. F. Wu, Z. Z. Ren, Z. Ren, Z. Sha, Z. Fu, Z. Xu, Z. Huang, Z. Zhang, Z. Xie, Z. Zhang, Z. Hao, Z. Gou, Z. Ma, Z. Yan, Z. Shao, Z. Xu, Z. Wu, Z. Zhang, Z. Li, Z. Gu, Z. Zhu, Z. Liu, Z. Li, Z. Xie, Z. Song, Z. Gao, and Z. Pan, "Deepseek-v3 技术报告," 2025.
+
+
+
+
+[2] RiseUnion, "Deepseek-v3/r1 671b deployment guide: Gpu requirements," 2025. Reports deployments requiring up to 32 accelerators for full-precision inference.
+
+> 
+[2] RiseUnion，“Deepseek-v3/r1 671b 部署指南：GPU 需求”，2025。报告称，全精度 (full-precision) 推理 (inference) 的部署最多需要 32 个加速器 (accelerator)。
+
+
+
+
+[3] W. Kwon, Z. Li, S. Zhuang, Y. Sheng, L. Zheng, C. H. Yu, J. E. Gonzalez, H. Zhang, and I. Stoica, "Efficient memory management for large language model serving with pagedattention," in Proceedings of the ACM SIGOPS 29th Symposium on Operating Systems Principles, 2023.
+
+> 
+[3] W. Kwon, Z. Li, S. Zhuang, Y. Sheng, L. Zheng, C. H. Yu, J. E. Gonzalez, H. Zhang, 和 I. Stoica，“使用 PagedAttention 的大型语言模型服务 (large language model serving) 的高效内存管理 (memory management)”，载于 ACM SIGOPS 第29届操作系统原理研讨会 (ACM SIGOPS 29th Symposium on Operating Systems Principles) 论文集，2023。
+
+
+
+
+[4] M. Aubakirova, A. Atallah, C. Clark, J. Summerville, and A. Midha, "State of ai: An empirical 100 trillion token study with openrouter," 2026.
+
+> 
+[4] M. Aubakirova, A. Atallah, C. Clark, J. Summerville, and A. Midha, "State of ai: An empirical 100 trillion token study with openrouter," 2026.
+
+
+
+
+[5] L. Zheng, L. Yin, Z. Xie, C. Sun, J. Huang, C. H. Yu, S. Cao, C. Kozyrakis, I. Stoica, J. E. Gonzalez, C. Barrett, and Y. Sheng, "Sglang: efficient execution of structured language model programs," in Proceedings of the 38th International Conference on Neural Information Processing Systems, NIPS '24, (Red Hook, NY, USA), Curran Associates Inc., 2024. https://dl.acm.org/doi/10.5555/3737916.3739916.
+
+> 
+[5] L. Zheng, L. Yin, Z. Xie, C. Sun, J. Huang, C. H. Yu, S. Cao, C. Kozyrakis, I. Stoica, J. E. Gonzalez, C. Barrett, 和 Y. Sheng，“Sglang：结构化语言模型程序的高效执行 (efficient execution of structured language model programs)”，载于第38届国际神经信息处理系统会议论文集 (Proceedings of the 38th International Conference on Neural Information Processing Systems), NIPS '24, (Red Hook, NY, USA), Curran Associates Inc., 2024. https://dl.acm.org/doi/10.5555/3737916.3739916。
+
+
+
+
+[6] N. Corporation, "Tensorrt-llm: A library for optimizing large language model inference," 2023. Accessed: 2024-05-20.
+
+> 
+[6] N. Corporation，“Tensorrt-llm：一个用于优化大语言模型 (large language model) 推理的库，”2023。访问日期：2024-05-20。
+
+
+
+
+[7] S. Shen, L. Huang, M. Chrapek, T. Schneider, J. Dayal, M. Gajbe, R. Wisniewski, and T. Hoefler, "Llamp: Assessing network latency tolerance of hpc applications with linear programming," in Proceedings of the International Conference for High Performance Computing, Networking, Storage, and Analysis, SC '24, IEEE Press, 2024. https://doi.org/10.1109/SC41406.2024.00070.
+
+> 
+[7] S. Shen, L. Huang, M. Chrapek, T. Schneider, J. Dayal, M. Gajbe, R. Wisniewski, and T. Hoefler, "Llamp: Assessing network latency tolerance of hpc applications with linear programming," in Proceedings of the International Conference for High Performance Computing, Networking, Storage, and Analysis, SC '24, IEEE Press, 2024. https://doi.org/10.1109/SC41406.2024.00070.
+
+
+
+
+[8] CoreWeave, "CoreWeave Pricing: Instance Pricing," 2026. Accessed: March 2026.
+
+> 
+[8] CoreWeave，“CoreWeave 定价 (Pricing)：实例定价 (Instance Pricing)，” 2026。访问日期：2026年3月。
+
+
+
+
+[9] F. Xu, "Scaling-up pytorch inference: Serving billions of daily nlp inferences with onnx runtime," 2022. Microsoft Open Source Blog, accessed: March 2026.
+
+> 
+[9] F. Xu，《扩展 PyTorch 推理：使用 ONNX Runtime 每天服务数十亿次 NLP 推理》，2022 年。Microsoft 开源博客，访问日期：2026 年 3 月。
+
+
+
+
+[10] L. Fusco, M. Khalilov, M. Chrapek, G. Chukkapalli, T. Schulthess, and T. Hoefler, "Understanding data movement in tightly coupled heterogeneous systems: A case study with the grace hopper superchip," 2024.
+
+> 
+[10] L. Fusco, M. Khalilov, M. Chrapek, G. Chukkapalli, T. Schulthess, 和 T. Hoefler, "理解紧耦合异构系统 (tightly coupled heterogeneous systems) 中的数据移动 (data movement)：以 Grace Hopper 超级芯片 (Grace Hopper Superchip) 为例的案例研究 (case study)，" 2024.
+
+
+
+
+[11] Z. Hu, S. Shen, T. Bonato, S. Jeaugey, C. Alexander, E. Spada, J. Dinan, J. Hammond, and T. Hoefler, " Demystifying NCCL: An In-Depth Analysis of GPU Communication Protocols and Algorithms ," in 2025 IEEE Symposium on High-Performance Interconnects (HOTI), (Los Alamitos, CA, USA), pp. 48-59, IEEE Computer Society, Aug. 2025. https://doi.ieeecomputersociety.org/10.1109/HOTI66940.2025.00024.
+
+> 
+[11] Z. Hu, S. Shen, T. Bonato, S. Jeaugey, C. Alexander, E. Spada, J. Dinan, J. Hammond, and T. Hoefler, “揭秘 NCCL：GPU 通信协议与算法 (GPU Communication Protocols and Algorithms) 的深入分析,” 载于 2025 IEEE 高性能互连研讨会 (IEEE Symposium on High-Performance Interconnects, HOTI), (美国加利福尼亚州洛斯阿拉米托斯), 第 48-59 页, IEEE 计算机学会 (IEEE Computer Society), 2025年8月. https://doi.ieeecomputersociety.org/10.1109/HOTI66940.2025.00024.
+
+
+
+
+[12] N. Corporation, "NVSHMEM communication library," 2022. Accessed on 2024-05-20.
+
+> 
+[12] N. Corporation，“NVSHMEM通信库”，2022年。访问日期：2024年5月20日。
+
+
+
+
+[13] Advanced Micro Devices, Inc., "ROCm Communication Collectives Library (RCCL) Documentation," 2024. Accessed: February 2026.
+
+> 
+[13] Advanced Micro Devices, Inc.，"ROCm 集合通信库 (RCCL) 文档"，2024。访问日期：2026年2月。
+
+
+
+
+[14] Advanced Micro Devices, Inc., rocSHMEM 3.2.0 Documentation. AMD ROCm Documentation, 2026. Accessed: 2026-02-12.
+
+> 
+[14] Advanced Micro Devices, Inc.，rocSHMEM 3.2.0 文档。AMD ROCm 文档，2026。访问于：2026-02-12。
+
+
+
+
+[15] UXL Foundation, oneAPI Specification 1.3-rev-1, 2024. Accessed: February 2026.
+
+> 
+[15] UXL 基金会 (UXL Foundation)，oneAPI 规范 (oneAPI Specification) 1.3-rev-1，2024。访问日期：2026年2月。
+
+
+
+
+[16] Message Passing Interface Forum, MPI: A Message-Passing Interface Standard Version 5.0, June 2025.
+
+> 
+[16] 消息传递接口论坛 (Message Passing Interface Forum)，MPI：消息传递接口标准 5.0 版 (MPI: A Message-Passing Interface Standard Version 5.0)，2025年6月。
+
+
+
+
+[17] J. Kraus, "An introduction to cuda-aware mpi," NVIDIA Technical Blog, July 2025.
+
+> 
+[17] J. Kraus，“CUDA 感知 MPI 简介”，NVIDIA 技术博客，2025 年 7 月。
+
+
+
+
+[18] D. De Sensi, L. Pichetti, F. Vella, T. De Matteis, Z. Ren, L. Fusco, M. Turisini, D. Cesarini, K. Lust, A. Trivedi, D. Roweth, F. Spiga, S. Di Girolamo, and T. Hoefler, "Exploring gpu-to-gpu communication: Insights into supercomputer interconnects," in SC24: International Conference for High Performance Computing, Networking, Storage and Analysis, p. 1-15, IEEE, Nov. 2024. http://dx.doi.org/10.1109/SC41406.2024.00039.
+
+> 
+[18] D. De Sensi, L. Pichetti, F. Vella, T. De Matteis, Z. Ren, L. Fusco, M. Turisini, D. Cesarini, K. Lust, A. Trivedi, D. Roweth, F. Spiga, S. Di Girolamo, 和 T. Hoefler，“探索 GPU 到 GPU 通信 (GPU-to-GPU communication)：对超级计算机互连 (supercomputer interconnects) 的洞见，” 载于 SC24：高性能计算、网络、存储与分析国际会议 (International Conference for High Performance Computing, Networking, Storage and Analysis)，第1-15页，IEEE，2024年11月. http://dx.doi.org/10.1109/SC41406.2024.00039.
+
+
+
+
+[19] J. Bachan, K. Ouyang, M. Mubarak, T. Gillis, B. Chang, D. Bureddy, G. Congiu, K. Caton, K. Aubrey, and X. Li, "Enabling fast inference and resilient training with nccl 2.27," Jul 2025. Technical Blog.
+
+> 
+[19] J. Bachan, K. Ouyang, M. Mubarak, T. Gillis, B. Chang, D. Bureddy, G. Congiu, K. Caton, K. Aubrey, and X. Li，“利用 nccl 2.27 实现快速推理 (inference) 与弹性训练 (training)，” 2025年7月。技术博客。
+
+
+
+
+[20] K. Hamidouche, J. Bachan, P. Markthub, P.-J. Gootzen, E. Agostini, S. Jeaugey, A. Shafi, G. Theodorakis, and M. G. Venkata, "Gpu-initiated networking for nccl," 2025.
+
+> 
+[20] K. Hamidouche, J. Bachan, P. Markthub, P.-J. Gootzen, E. Agostini, S. Jeaugey, A. Shafi, G. Theodorakis, and M. G. Venkata, "Gpu-initiated networking for nccl," 2025.
+
+
+
+
+[21] NVIDIA Corporation, Device-Initiated Communication - NCCL 2.29.1 Documentation. NVIDIA, 2025. Accessed: 2026-02-12.
+
+> 
+[21] NVIDIA 公司，设备发起通信 (Device-Initiated Communication) - NCCL 2.29.1 文档。NVIDIA，2025。访问日期：2026-02-12。
+
+
+
+
+[22] S. Jeaugey, J. Bachan, P. Markthub, Z. He, S. Das, and F. Ghodsian, "Fusing communication and compute with new device api and copy engine collectives in nvidia nccl 2.28," Nov. 2025. NVIDIA Technical Blog.
+
+> 
+[22] S. Jeaugey、J. Bachan、P. Markthub、Z. He、S. Das 和 F. Ghodsian，“利用新的设备端 API (device API) 与复制引擎集合通信 (copy engine collectives) 在 NVIDIA NCCL 2.28 中融合通信与计算”，2025年11月。NVIDIA 技术博客 (NVIDIA Technical Blog)。
+
+
+
+
+[23] PyTorch Contributors, Distributed communication package - torch.distributed. PyTorch Foundation, 2026. PyTorch 2.10 documentation, last updated 2026-01-08, accessed 2026-02-12.
+
+> 
+[23] PyTorch 贡献者 (PyTorch Contributors)，分布式通信包 (Distributed communication package) - torch.distributed。PyTorch 基金会 (PyTorch Foundation)，2026。PyTorch 2.10 文档，最后更新于 2026-01-08，访问于 2026-02-12。
+
+
+
+
+[24] Erlangen National High Performance Computing Center (NHR@FAU), PyTorch - NHR@FAU HPC Documentation. NHR@FAU, 2026. Accessed 2026-02-12.
+
+> 
+[24] 埃尔朗根国家高性能计算中心 (Erlangen National High Performance Computing Center, NHR@FAU)，PyTorch - NHR@FAU 高性能计算文档 (HPC Documentation)。NHR@FAU，2026。访问日期 2026-02-12。
+
+
+
+
+[25] A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, G. Chanan, T. Killeen, Z. Lin, N. Gimelshein, L. Antiga, A. Desmaison, A. Köpf, E. Z. Yang, Z. DeVito, M. Raison, A. Tejani, S. Chilamkurthy, B. Steiner, L. Fang, J. Bai, and S. Chintala, "Pytorch: An imperative style, high-performance deep learning library," CoRR, vol. abs/1912.01703, 2019.
+
+> 
+[25] A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, G. Chanan, T. Killeen, Z. Lin, N. Gimelshein, L. Antiga, A. Desmaison, A. Köpf, E. Z. Yang, Z. DeVito, M. Raison, A. Tejani, S. Chilamkurthy, B. Steiner, L. Fang, J. Bai, 和 S. Chintala，“Pytorch：一种命令式风格的高性能深度学习库 (An imperative style, high-performance deep learning library)，” CoRR, vol. abs/1912.01703, 2019.
+
+
+
+
+[26] M. Abadi, A. Agarwal, P. Barham, E. Brevdo, Z. Chen, C. Citro, G. S. Corrado, A. Davis, J. Dean, M. Devin, S. Ghemawat, I. Goodfellow, A. Harp, G. Irving, M. Isard, Y. Jia, R. Jozefowicz, L. Kaiser, M. Kudlur, J. Levenberg, D. Mané, R. Monga, S. Moore, D. Murray, C. Olah, M. Schuster, J. Shlens, B. Steiner, I. Sutskever, K. Talwar, P. Tucker, V. Vanhoucke, V. Vasudevan, F. Viégas, O. Vinyals, P. Warden, M. Wattenberg, M. Wicke, Y. Yu, and X. Zheng, "TensorFlow: Large-scale machine learning on heterogeneous systems," 2015. Software available from tensorflow.org.
+
+> 
+[26] M. Abadi、A. Agarwal、P. Barham、E. Brevdo、Z. Chen、C. Citro、G. S. Corrado、A. Davis、J. Dean、M. Devin、S. Ghemawat、I. Goodfellow、A. Harp、G. Irving、M. Isard、Y. Jia、R. Jozefowicz、L. Kaiser、M. Kudlur、J. Levenberg、D. Mané、R. Monga、S. Moore、D. Murray、C. Olah、M. Schuster、J. Shlens、B. Steiner、I. Sutskever、K. Talwar、P. Tucker、V. Vanhoucke、V. Vasudevan、F. Viégas、O. Vinyals、P. Warden、M. Wattenberg、M. Wicke、Y. Yu 和 X. Zheng，“TensorFlow：异构系统上的大规模机器学习”，2015年。软件可从 tensorflow.org 获取。
+
+
+
+
+[27] NVIDIA Corporation, cuSOLVER API Reference. NVIDIA Corporation, 2024. Version 13.1, accessed 2026-02-12.
+
+> 
+[27] NVIDIA 公司，cuSOLVER API 参考。NVIDIA 公司，2024。版本 13.1，访问日期 2026-02-12。
+
+
+
+
+[28] NVIDIA Corporation, cuBLASMp: A High-Performance CUDA Library for Distributed Dense Linear Algebra. NVIDIA Corporation, 2026. Accessed 2026-02-12.
+
+> 
+[28] NVIDIA Corporation, cuBLASMp：用于分布式稠密线性代数的高性能 CUDA 库 (cuBLASMp: A High-Performance CUDA Library for Distributed Dense Linear Algebra)。NVIDIA Corporation，2026。访问日期 2026-02-12。
+
+
+
+
+[29] P. Singhania, S. Singh, L. D. Hough, A. Srivastava, H. Menon, C. F. Jekel, and A. Bhatele, "Llm inference beyond a single node: From bottlenecks to mitigations with fast all-reduce communication," 2025.
+
+> 
+[29] P. Singhania, S. Singh, L. D. Hough, A. Srivastava, H. Menon, C. F. Jekel, 和 A. Bhatele, "超越单节点的 LLM 推理：从瓶颈到通过快速全规约 (all-reduce) 通信的缓解措施," 2025.
+
+
+
+
+[30] C. Hwang, P. Cheng, R. Dathathri, A. Jangda, S. Maleki, M. Musu-vathi, O. Saarikivi, A. Shah, Z. Yang, B. Li, C. Rocha, Q. Zhou, M. Ghazimirsaeed, S. Anantharamu, and J. Jose, "Msccl+++: Rethinking gpu communication abstractions for ai inference," in Proceedings of the 31st ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 2, ASPLOS '26, (New York, NY, USA), p. 1201-1215, Association for Computing Machinery, 2026.
+
+> 
+[30] C. Hwang, P. Cheng, R. Dathathri, A. Jangda, S. Maleki, M. Musu-vathi, O. Saarikivi, A. Shah, Z. Yang, B. Li, C. Rocha, Q. Zhou, M. Ghazimirsaeed, S. Anantharamu, and J. Jose, "Msccl+++: 面向AI推理的GPU通信抽象再思考 (Rethinking gpu communication abstractions for ai inference)," in 第31届ACM编程语言与操作系统体系结构支持国际会议论文集，第2卷，ASPLOS '26, (美国纽约州纽约市), p. 1201-1215, 美国计算机协会 (Association for Computing Machinery), 2026.
+
+
+
+
+[31] D. Patel, M. Xie, D. Nishball, I. Chiam, P. Zhou, Doug, and W. Chu, "Nvidia gtc 2025 - built for reasoning, vera rubin, kyber, cpo, dynamo inference, jensen math, feynman," Mar. 2025.
+
+> 
+[31] D. Patel, M. Xie, D. Nishball, I. Chiam, P. Zhou, Doug, 和 W. Chu，“Nvidia GTC 2025——为推理 (reasoning) 而构建，Vera Rubin、Kyber、CPO、Dynamo 推断 (inference)、Jensen Math、Feynman”，2025年3月。
+
+
+
+
+[32] xAI, "Colossus: xai's supercomputer for grok," 2024. Describes a large-scale GPU cluster with tightly coupled high-bandwidth interconnect.
+
+> 
+[32] xAI，“Colossus：xai 用于 grok 的超级计算机”，2024 年。描述了一个具有紧耦合高带宽互连 (high-bandwidth interconnect) 的大规模 GPU 集群。
+
+
+
+
+[33] J. Tang, L. Robison, M. Koop, and W. Wang, "Recent improvement to open mpi allreduce and the impact to application performance," Sept. 2024.
+
+> 
+[33] J. Tang、L. Robison、M. Koop 和 W. Wang，“Open MPI AllReduce 的最新改进及其对应用程序性能 (application performance) 的影响”，2024年9月。
+
+
+
+
+[34] D. Xiong, L. Chen, Y. Jiang, D. Li, S. Wang, and S. Wang, "Revisiting the time cost model of allreduce," 2024.
+
+> 
+[34] D. Xiong, L. Chen, Y. Jiang, D. Li, S. Wang, and S. Wang, "Revisiting the time cost model of allreduce," 2024.
+
+
+
+
+[35] A. Weingram, Y. Li, H. Qi, D. Ng, L. Dai, and X. Lu, "xccl: A survey of industry-led collective communication libraries for deep learning," J. Comput. Sci. Technol., vol. 38, p. 166-195, Mar. 2023. https://doi.org/10.1007/s11390-023-2894-6.
+
+> 
+[35] A. Weingram, Y. Li, H. Qi, D. Ng, L. Dai, 和 X. Lu, “xccl：面向深度学习的产业主导集合通信库综述 (A Survey of Industry-Led Collective Communication Libraries for Deep Learning)，” J. Comput. Sci. Technol., 第 38 卷, 第 166-195 页, 2023 年 3 月. https://doi.org/10.1007/s11390-023-2894-6.
+
+
+
+
+[36] M. Chrapek, M. Khalilov, and T. Hoefler, "Hear: Homomorphically encrypted allreduce," in Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis, SC '23, (New York, NY, USA), Association for Computing Machinery, 2023. https://doi.org/10.1145/3581784.3607099.
+
+> 
+[36] M. Chrapek, M. Khalilov, 和 T. Hoefler, “Hear: 同态加密全归约 (allreduce)，” 载于 国际高性能计算、网络、存储与分析会议论文集，SC '23，（美国纽约州纽约市），美国计算机协会，2023年。https://doi.org/10.1145/3581784.3607099。
+
+
+
+
+[37] D. E. Bernholdt, S. Boehm, G. Bosilca, M. Gorentla Venkata, R. E. Grant, T. Naughton, H. P. Pritchard, M. Schulz, and G. R. Vallee, "A survey of mpi usage in the us exascale computing project," Concurrency and Computation: Practice and Experience, vol. 32, no. 3, p. e4851, 2020. https://doi.org/10.1002/cpe.4851.
+
+> 
+[37] D. E. Bernholdt, S. Boehm, G. Bosilca, M. Gorentla Venkata, R. E. Grant, T. Naughton, H. P. Pritchard, M. Schulz, and G. R. Vallee, “A survey of mpi usage in the us exascale computing project,” Concurrency and Computation: Practice and Experience, vol. 32, no. 3, p. e4851, 2020. https://doi.org/10.1002/cpe.4851.
+
+
+
+
+[38] I. Laguna, R. Marshall, K. Mohror, M. Ruefenacht, A. Skjellum, and N. Sultana, "A large-scale study of mpi usage in open-source hpc applications," in Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis, SC '19, (New York, NY, USA), Association for Computing Machinery, 2019. https://doi.org/10.1145/3295500.3356176.
+
+> 
+[38] I. Laguna, R. Marshall, K. Mohror, M. Ruefenacht, A. Skjellum, 和 N. Sultana，“开源高性能计算应用中 MPI 使用情况的大规模研究”，载于《高性能计算、网络、存储与分析国际会议论文集》，SC '19，（美国纽约州纽约市），美国计算机协会 (Association for Computing Machinery)，2019年。https://doi.org/10.1145/3295500.3356176。
+
+
+
+
+[39] S.-M. Hammer, S. Schmid, R. Singh, and V. Addanki, "Short-circuiting rings for low-latency allreduce," 2025.
+
+> 
+[39] S.-M. Hammer、S. Schmid、R. Singh 和 V. Addanki，“用于低延迟全归约 (allreduce) 的短路环”，2025 年。
+
+
+
+
+[40] NVIDIA Corporation, "Cuda c++ programming guide." https://docs.nvidia.com/cuda/cuda-c-programming-guide/, 2024. CUDA Toolkit Documentation.
+
+> 
+[40] NVIDIA 公司，《CUDA C++ 编程指南》。https://docs.nvidia.com/cuda/cuda-c-programming-guide/，2024。CUDA 工具包文档。
+
+
+
+
+[41] NVIDIA Corporation, "Parallel thread execution isa version 8.0." https:// docs.nvidia.com/cuda/parallel-thread-execution/, 2023. NVIDIA CUDA PTX Instruction Set Architecture.
+
+> 
+[41] NVIDIA 公司，《并行线程执行 ISA 8.0 版》。https://docs.nvidia.com/cuda/parallel-thread-execution/，2023 年。NVIDIA CUDA PTX 指令集架构 (Instruction Set Architecture)。
+
+
+
+
+[42] NVIDIA Corporation, "vllm container (version 26.02-py3)," 2026. Accessed: 2026-03-29.
+
+> 
+[42] 英伟达公司 (NVIDIA Corporation)，"vllm container (version 26.02-py3)，" 2026。访问日期：2026-03-29。
+
+
+
+
+[43] M. Khalilov, S. D. Girolamo, M. Chrapek, R. Nudelman, G. Bloch, and T. Hoefler, "Network-offloaded bandwidth-optimal broadcast and allgather for distributed ai," in SC24: International Conference for High Performance Computing, Networking, Storage and Analysis, pp. 1-17, 2024. https://dl.acm.org/doi/10.1109/SC41406.2024.00109.
+
+> 
+[43] M. Khalilov、S. D. Girolamo、M. Chrapek、R. Nudelman、G. Bloch 和 T. Hoefler，“面向分布式 AI 的网络卸载带宽最优广播与全收集 (Network-offloaded bandwidth-optimal broadcast and allgather for distributed ai)”，载于 SC24：国际高性能计算、网络、存储与分析会议 (International Conference for High Performance Computing, Networking, Storage and Analysis)，第 1-17 页，2024 年。https://dl.acm.org/doi/10.1109/SC41406.2024.00109。
+
+
+
+
+[44] S. Kolluru, "Comparative analysis of large language model inference serving systems: A performance study of vllm and huggingface tgi," 2025.
+
+> 
+[44] S. Kolluru，“大型语言模型 (large language model) 推理服务系统的比较分析：vllm 与 huggingface tgi 的性能研究，” 2025。
+
+
+
+
+[45] NeoSignal, "vllm - technology radar entry," 2025. Accessed: 2026-03- 29.
+
+> 
+[45] NeoSignal，“vllm——技术雷达条目”，2025年。访问日期：2026-03-29。
+
+
+
+
+[46] J.-S. Denain and A. Ho, "The huge potential implications of long-context inference," 2025. Accessed: 2026-03-29.
+
+> 
+[46] J.-S. Denain 和 A. Ho，“长上下文推理 (long-context inference) 的巨大潜在影响”，2025。访问日期：2026-03-29。
+
+
+
+
+[47] Y. Chung, G. T. Kakkar, Y. Gan, B. Milne, and F. Özcan, "Is long context all you need? leveraging llm's extended context for nl2sql," Proceedings of the VLDB Endowment, vol. 18, p. 2735-2747, Apr. 2025. http://dx.doi.org/10.14778/3742728.3742761.
+
+> 
+[47] Y. Chung, G. T. Kakkar, Y. Gan, B. Milne, 和 F. Özcan，《长上下文就是你所需要的全部吗？利用 LLM 的扩展上下文实现 NL2SQL (nl2sql)》，VLDB 论文集 (Proceedings of the VLDB Endowment)，第 18 卷，第 2735-2747 页，2025 年 4 月。http://dx.doi.org/10.14778/3742728.3742761.
+
+
+
+
+[48] Y. Zhang, R. Sun, Y. Chen, T. Pfister, R. Zhang, and S. Arik, "Chain of agents: Large language models collaborating on long-context tasks," 2024.
+
+> 
+[48] Y. Zhang, R. Sun, Y. Chen, T. Pfister, R. Zhang, and S. Arik, "智能体链 (Chain of agents)：大型语言模型 (Large language models) 协作处理长上下文 (long-context) 任务," 2024.
+
+
+
+
+[49] H. Sun, L. Li, M. Xiao, and C. Xu, "Breaking the boundaries of long-context llm inference: Adaptive kv management on a single commodity gpu," 2025.
+
+> 
+[49] H. Sun, L. Li, M. Xiao, and C. Xu，“突破长上下文大语言模型 (LLM) 推理的边界：在单个商用图形处理器 (GPU) 上的自适应键值 (KV) 管理”，2025。
+
+
+
+
+[50] BentoML Team, "Prefill-decode disaggregation." https://bentoml.com/ llm/inference-optimization/prefill-decode-disaggregation, 2025. Explains motivation and benefits of PD disaggregation.
+
+> 
+[50] BentoML 团队，“预填充-解码分离 (Prefill-decode disaggregation)。” https://bentoml.com/ llm/inference-optimization/prefill-decode-disaggregation，2025。阐述了 PD 分离 (PD disaggregation) 的动机与优势。
+
+
+
+
+[51] L. Li, D. Li, B. Gong, and Y. Zhang, "Slo-aware compute resource allocation for prefill-decode disaggregated llm inference," 2026.
+
+> 
+[51] L. Li、D. Li、B. Gong 和 Y. Zhang，“面向 SLO 的预填充-解码分离式 (prefill-decode disaggregated) LLM 推理计算资源分配，”2026。
+
+
+
+
+[52] GROMACS Development Team, GROMACS 2024.3 Installation Guide, 2024. Accessed: March 2026.
+
+> 
+[52] GROMACS开发团队，《GROMACS 2024.3 安装指南》，2024年。访问日期：2026年3月。
+
+
+
+
+[53] LAMMPS Development Team, LAMMPS Documentation: GPU Package, 2026. Accessed: March 2026.
+
+> 
+[53] LAMMPS 开发团队，LAMMPS 文档：GPU 包，2026。访问日期：2026年3月。
+
+
+
+
+[54] A. Myers, W. Zhang, A. Almgren, T. Antoun, J. Bell, A. Huebl, and A. Sinn, "Amrex and pyamrex: Looking beyond the exas-cale computing project," The International Journal of High Performance Computing Applications, vol. 38, no. 6, pp. 599-611, 2024. https://doi.org/10.1177/10943420241271017.
+
+> 
+[54] A. Myers, W. Zhang, A. Almgren, T. Antoun, J. Bell, A. Huebl, 和 A. Sinn, “Amrex 和 pyamrex：超越百亿亿次计算项目的展望，” 《国际高性能计算应用杂志》(The International Journal of High Performance Computing Applications)，第 38 卷，第 6 期，第 599-611 页，2024 年。https://doi.org/10.1177/10943420241271017。
+
+
+
+
+[55] A. Huebl, "AMReX issue #4821: Device-initiated collectives in NCCL/RCCL." https://github.com/AMReX-Codes/amrex/issues/4821, 2025. GitHub issue, accessed January 2026.
+
+> 
+[55] A. Huebl，“AMReX issue #4821：NCCL/RCCL 中的设备发起集合通信 (Device-initiated collectives)。” https://github.com/AMReX-Codes/amrex/issues/4821，2025。GitHub issue，访问于 2026 年 1 月。
+
+
+
+
+[56] J. Kim, A. D. Baczewski, T. D. Beaudet, A. Benali, M. C. Bennett, M. A. Berrill, N. S. Blunt, E. J. L. Borda, M. Casula, D. M. Ceperley, S. Chiesa, B. K. Clark, R. C. Clay, K. T. Delaney, M. Dewing, K. P. Esler, H. Hao, O. Heinonen, P. R. C. Kent, J. T. Krogel, I. Kylänpää, Y. W. Li, M. G. Lopez, Y. Luo, F. D. Malone, R. M. Martin, A. Mathuriya, J. McMinis, C. A. Melton, L. Mitas, M. A. Morales, E. Neuscamman, W. D. Parker, S. D. Pineda Flores, N. A. Romero, B. M. Rubenstein, J. A. R. Shea, H. Shin, L. Shulenburger, A. F. Tillack, J. P. Townsend, N. M. Tubman, B. Van Der Goetz, J. E. Vincent, D. C. Yang, Y. Yang, S. Zhang, and L. Zhao, "Qmcpack: an open source ab initio quantum monte carlo package for the electronic structure of atoms, molecules and solids," Journal of Physics: Condensed Matter, vol. 30, p. 195901, apr 2018. https://doi.org/10.1088/1361-648X/aab9c3.
+
+> 
+[56] J. Kim, A. D. Baczewski, T. D. Beaudet, A. Benali, M. C. Bennett, M. A. Berrill, N. S. Blunt, E. J. L. Borda, M. Casula, D. M. Ceperley, S. Chiesa, B. K. Clark, R. C. Clay, K. T. Delaney, M. Dewing, K. P. Esler, H. Hao, O. Heinonen, P. R. C. Kent, J. T. Krogel, I. Kylänpää, Y. W. Li, M. G. Lopez, Y. Luo, F. D. Malone, R. M. Martin, A. Mathuriya, J. McMinis, C. A. Melton, L. Mitas, M. A. Morales, E. Neuscamman, W. D. Parker, S. D. Pineda Flores, N. A. Romero, B. M. Rubenstein, J. A. R. Shea, H. Shin, L. Shulenburger, A. F. Tillack, J. P. Townsend, N. M. Tubman, B. Van Der Goetz, J. E. Vincent, D. C. Yang, Y. Yang, S. Zhang, and L. Zhao, "Qmcpack：用于原子、分子和固体电子结构的开源从头算量子蒙特卡洛软件包 (an open source ab initio quantum monte carlo package for the electronic structure of atoms, molecules and solids)，" Journal of Physics: Condensed Matter, vol. 30, p. 195901, apr 2018. https://doi.org/10.1088/1361-648X/aab9c3.
+
+
+
+
+[57] QMCPACK Developers, "Qmcpack issue #4654," 2023. GitHub issue in the QMCPACK repository.
+
+> 
+[57] QMCPACK 开发者，“Qmcpack 议题 (issue) #4654”，2023 年。QMCPACK 代码仓库 (repository) 中的 GitHub 议题 (issue)。
+
+
+
+
+[58] NVIDIA, "NVIDIA HPCG Benchmark," 2024. Accessed: 2026-04-08.
+
+> 
+[58] NVIDIA，“NVIDIA HPCG基准测试”，2024年。访问日期：2026-04-08。
+
+
+
+
+[59] NVIDIA, cuSOLVERMp: A High-Performance CUDA Library for Distributed Dense Linear Algebra, 2026. Accessed: March 2026.
+
+> 
+[59] NVIDIA，cuSOLVERMp：用于分布式稠密线性代数的高性能 CUDA 库 (A High-Performance CUDA Library for Distributed Dense Linear Algebra)，2026。访问时间：2026 年 3 月。
+
+
+
+
+[60] A. Marek, V. Blum, R. Johanni, V. Havu, B. Lang, T. Auckenthaler, A. Heinecke, H.-J. Bungartz, and H. Lederer, "The elpa library: scalable parallel eigenvalue solutions for electronic structure theory and computational science," Journal of Physics: Condensed Matter, vol. 26, p. 213201, may 2014. https://doi.org/10.1088/0953-8984/26/21/213201.
+
+> 
+[60] A. Marek, V. Blum, R. Johanni, V. Havu, B. Lang, T. Auckenthaler, A. Heinecke, H.-J. Bungartz, 和 H. Lederer，“ELPA 库 (elpa library)：用于电子结构理论 (electronic structure theory) 和计算科学 (computational science) 的可扩展并行特征值求解 (scalable parallel eigenvalue solutions)，” Journal of Physics: Condensed Matter, 第 26 卷，第 213201 页，2014 年 5 月. https://doi.org/10.1088/0953-8984/26/21/213201.
+
+
+
+
+[61] CSCS, "New research infrastructure: 'alps' supercomputer inaugurated," Swiss National Supercomputing Center.
+
+> 
+[61] CSCS，“新研究基础设施：‘alps’超级计算机落成，”瑞士国家超级计算中心 (Swiss National Supercomputing Center)。
+
+
+
+
+[62] Z. Ye, L. Chen, R. Lai, W. Lin, Y. Zhang, S. Wang, T. Chen, B. Kasikci, V. Grover, A. Krishnamurthy, and L. Ceze, "Flashinfer: Efficient and customizable attention engine for llm inference serving," 2025.
+
+> 
+[62] Z. Ye, L. Chen, R. Lai, W. Lin, Y. Zhang, S. Wang, T. Chen, B. Kasikci, V. Grover, A. Krishnamurthy, and L. Ceze, "Flashinfer：面向大语言模型推理服务的高效可定制注意力引擎 (Efficient and customizable attention engine for llm inference serving)，" 2025。
+
+
+
+
+[63] C. Zhao, S. Zhou, L. Zhang, C. Deng, Z. Xu, Y. Liu, K. Yu, J. Li, and L. Zhao, "Deepep: an efficient expert-parallel communication library," 2025.
+
+> 
+[63] C. Zhao, S. Zhou, L. Zhang, C. Deng, Z. Xu, Y. Liu, K. Yu, J. Li, and L. Zhao, "Deepep：一种高效的专家并行 (expert-parallel) 通信库 (communication library)，" 2025.
+
+
+
+
+[64] A. Goldman, N. Boker, M. Sheraizin, N. Admoni, A. Polyakov, S. Bhat-tacharya, F. Yu, K. Sun, G. Theodorakis, H.-C. Yin, P.-J. Gootzen, A. Shafi, A. Ravid, S. D. Girolamo, M. G. Venkata, and G. Bloch, "Nccl ep: Towards a unified expert parallel communication api for nccl," 2026.
+
+> 
+[64] A. Goldman、N. Boker、M. Sheraizin、N. Admoni、A. Polyakov、S. Bhat-tacharya、F. Yu、K. Sun、G. Theodorakis、H.-C. Yin、P.-J. Gootzen、A. Shafi、A. Ravid、S. D. Girolamo、M. G. Venkata 和 G. Bloch，“Nccl ep：迈向面向 NCCL 的统一专家并行通信 API (unified expert parallel communication api for nccl)”，2026 年。
+
+
+
+
+[65] A. Ranadive, T. Stamler, S. Lee, and M. Khazraee, "Enhancing distributed inference performance with the nvidia inference transfer library," Mar. 2026. NVIDIA Technical Blog.
+
+> 
+[65] A. Ranadive, T. Stamler, S. Lee, and M. Khazraee，“利用 NVIDIA 推理传输库 (NVIDIA Inference Transfer Library) 提升分布式推理 (distributed inference) 性能”，2026年3月。NVIDIA 技术博客 (NVIDIA Technical Blog)。
+
+
+
+
+[66] OpenAI, "Gpt-5.4 chatbot," 2026.
+
+> 
+[66] OpenAI，“Gpt-5.4 聊天机器人 (chatbot)，”2026。
