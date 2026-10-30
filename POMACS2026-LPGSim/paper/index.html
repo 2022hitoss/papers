@@ -1,0 +1,8411 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://2022hitoss.github.io/papers/POMACS2026-LPGSim/paper/">
+      
+      
+        <link rel="prev" href="../doc2x/">
+      
+      
+        <link rel="next" href="../translated/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>LPGSim: A Lightweight Parallel GPU Simulator Maximizing Speed with Trustworthy Simulation 深度解读 - Papers Collection</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#lpgsim-a-lightweight-parallel-gpu-simulator-maximizing-speed-with-trustworthy-simulation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Papers Collection" class="md-header__button md-logo" aria-label="Papers Collection" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Papers Collection
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              LPGSim: A Lightweight Parallel GPU Simulator Maximizing Speed with Trustworthy Simulation 深度解读
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Papers Collection" class="md-nav__button md-logo" aria-label="Papers Collection" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Papers Collection
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASPLOS2019 PTXMemoryModel
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ASPLOS2019 PTXMemoryModel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASPLOS2019-PTXMemoryModel/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A Formal Analysis of the NVIDIA PTX Memory Consistency Model 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASPLOS2019-PTXMemoryModel/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A Formal Analysis of the NVIDIA PTX Memory Consistency Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASPLOS2024 T3
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ASPLOS2024 T3
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASPLOS2024-T3/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    T3: Transparent Tracking &amp; Triggering for Fine-grained Overlap of Compute &amp; Collectives 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASPLOS2026 RemoteMemoryOrdering
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ASPLOS2026 RemoteMemoryOrdering
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASPLOS2026-RemoteMemoryOrdering/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Efficient Remote Memory Ordering for Non-Coherent Interconnects 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASPLOS2026-RemoteMemoryOrdering/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Efficient Remote Memory Ordering for Non-Coherent Interconnects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CAL2015 Ramulator
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CAL2015 Ramulator
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CAL2015-Ramulator/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ramulator: A Fast and Extensible DRAM Simulator 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CAL2015-Ramulator/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ramulator: A Fast and Extensible DRAM Simulator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CSUR2026 GPU Centric Communication
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CSUR2026 GPU Centric Communication
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CSUR2026-GPU-Centric-Communication/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Landscape of GPU-Centric Communication 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CSUR2026-GPU-Centric-Communication/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DAC2025 GEM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    DAC2025 GEM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../DAC2025-GEM/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEM: GPU-Accelerated Emulator-Inspired RTL Simulation 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../DAC2025-GEM/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEM: GPU-Accelerated Emulator-Inspired RTL Simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HOTI2025 DemystifyingNCCL
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HOTI2025 DemystifyingNCCL
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HOTI2025-DemystifyingNCCL/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demystifying NCCL: An In-depth Analysis of GPU Communication Protocols and Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HOTI2025-DemystifyingNCCL/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demystifying NCCL: An In-depth Analysis of GPU Communication Protocols and Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2014 QuickRelease
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2014 QuickRelease
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2014-QuickRelease/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QuickRelease: A Throughput-oriented Approach to Release Consistency on GPUs 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2014-QuickRelease/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QuickRelease: A Throughput-oriented Approach to Release Consistency on GPUs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2020 HMG
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2020 HMG
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2020-HMG/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HMG: Extending Cache Coherence Protocols Across Modern Hierarchical Multi-GPU Systems 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2020-HMG/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HMG: Extending Cache Coherence Protocols Across Modern Hierarchical Multi-GPU Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2023 FinePack
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2023 FinePack
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2023-FinePack/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FinePack: Transparently Improving the Efficiency of Fine-Grained Transfers in Multi-GPU Systems 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2024 GRIT
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2024 GRIT
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2024-GRIT/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GRIT: Enhancing Multi-GPU Performance with Fine-Grained Dynamic Page Placement 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2025 DynamoLLM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2025 DynamoLLM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2025-DynamoLLM/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoLLM: Designing LLM Inference Clusters for Performance and Energy Efficiency 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2025 OASIS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2025 OASIS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2025-OASIS/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OASIS: Object-Aware Page Management for Multi-GPU Systems 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2026 CAIS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2026 CAIS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2026-CAIS/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Towards Compute-Aware In-Switch Computing for LLMs Tensor-Parallelism on Multi-GPU Systems 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HPCA2026 LRM GPU
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HPCA2026 LRM GPU
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2026-LRM-GPU/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LRM-GPU: Alleviating Synchronization Overhead for Multi-Chiplet GPU Architecture 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HPCA2026-LRM-GPU/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LRM-GPU: Alleviating Synchronization Overhead for Multi-Chiplet GPU Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_16" >
+        
+          
+          <label class="md-nav__link" for="__nav_16" id="__nav_16_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2002 FO4PipelineDepth
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_16_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_16">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2002 FO4PipelineDepth
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2002-FO4PipelineDepth/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Optimal Logic Depth Per Pipeline Stage is 6 to 8 FO4 Inverter Delays 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2002-FO4PipelineDepth/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Optimal Logic Depth Per Pipeline Stage is 6 to 8 FO4 Inverter Delays
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_17" >
+        
+          
+          <label class="md-nav__link" for="__nav_17" id="__nav_17_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2013 MTTOPConsistency
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_17_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_17">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2013 MTTOPConsistency
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2013-MTTOPConsistency/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exploring Memory Consistency for Massively-Threaded Throughput-Oriented Processors 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2013-MTTOPConsistency/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exploring Memory Consistency for Massively-Threaded Throughput-Oriented Processors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_18" >
+        
+          
+          <label class="md-nav__link" for="__nav_18" id="__nav_18_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2017 MCM GPU
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_18_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_18">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2017 MCM GPU
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2017-MCM-GPU/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCM-GPU: Multi-Chip-Module GPUs for Continued Performance Scalability 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2017-MCM-GPU/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCM-GPU: Multi-Chip-Module GPUs for Continued Performance Scalability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_19" >
+        
+          
+          <label class="md-nav__link" for="__nav_19" id="__nav_19_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2020 InNetworkCollectives
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_19_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_19">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2020 InNetworkCollectives
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2020-InNetworkCollectives/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    An In-Network Architecture for Accelerating Shared-Memory Multiprocessor Collectives 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2020-InNetworkCollectives/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    An In-Network Architecture for Accelerating Shared-Memory Multiprocessor Collectives
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_20" >
+        
+          
+          <label class="md-nav__link" for="__nav_20" id="__nav_20_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2021 MULTITREE
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_20_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_20">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2021 MULTITREE
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2021-MULTITREE/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Communication Algorithm-Architecture Co-Design for Distributed Deep Learning 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_21" >
+        
+          
+          <label class="md-nav__link" for="__nav_21" id="__nav_21_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2021 PROACT
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_21_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_21">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2021 PROACT
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2021-PROACT/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Efficient Multi-GPU Shared Memory via Automatic Optimization of Fine-Grained Transfers 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_22" >
+        
+          
+          <label class="md-nav__link" for="__nav_22" id="__nav_22_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2025 Chimera
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_22_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_22">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2025 Chimera
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2025-Chimera/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chimera: Communication Fusion for Hybrid Parallelism in Large Language Models 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_23" >
+        
+          
+          <label class="md-nav__link" for="__nav_23" id="__nav_23_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2025 NetCrafter
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_23_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_23">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2025 NetCrafter
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2025-NetCrafter/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetCrafter: Tailoring Network Traffic for Non-Uniform Bandwidth Multi-GPU Systems 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2025-NetCrafter/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetCrafter: Tailoring Network Traffic for Non-Uniform Bandwidth Multi-GPU Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_24" >
+        
+          
+          <label class="md-nav__link" for="__nav_24" id="__nav_24_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2025 UGPU
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_24_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_24">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2025 UGPU
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2025-UGPU/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UGPU: Dynamically Constructing Unbalanced GPUs for Enhanced Resource Efficiency 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_25" >
+        
+          
+          <label class="md-nav__link" for="__nav_25" id="__nav_25_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2026 MTIA300
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_25_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_25">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2026 MTIA300
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2026-MTIA300/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MTIA 300: Meta's First Training Chip Featuring Built-in NICs and Collective Offloading Engines 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_26" >
+        
+          
+          <label class="md-nav__link" for="__nav_26" id="__nav_26_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISCA2026 PatternsBehindChaos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_26_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_26">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISCA2026 PatternsBehindChaos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2026-PatternsBehindChaos/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISCA2026-PatternsBehindChaos/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_27" >
+        
+          
+          <label class="md-nav__link" for="__nav_27" id="__nav_27_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISPASS2009 GPGPU Sim
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_27_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_27">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ISPASS2009 GPGPU Sim
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISPASS2009-GPGPU-Sim/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analyzing CUDA Workloads Using a Detailed GPU Simulator 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ISPASS2009-GPGPU-Sim/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analyzing CUDA Workloads Using a Detailed GPU Simulator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_28" >
+        
+          
+          <label class="md-nav__link" for="__nav_28" id="__nav_28_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MICRO2015 DeNovoNoScopes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_28_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_28">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MICRO2015 DeNovoNoScopes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2015-DeNovoNoScopes/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Efficient GPU Synchronization without Scopes: Saying No to Complex Consistency Models 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2015-DeNovoNoScopes/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Efficient GPU Synchronization without Scopes: Saying No to Complex Consistency Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_29" >
+        
+          
+          <label class="md-nav__link" for="__nav_29" id="__nav_29_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MICRO2020 LADM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_29_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_29">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MICRO2020 LADM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2020-LADM/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Locality-Centric Data and Threadblock Management for Massive GPUs 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2020-LADM/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Locality-Centric Data and Threadblock Management for Massive GPUs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_30" >
+        
+          
+          <label class="md-nav__link" for="__nav_30" id="__nav_30_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MICRO2021 GPS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_30_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_30">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MICRO2021 GPS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2021-GPS/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPS: A Global Publish-Subscribe Model for Multi-GPU Memory Management 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_31" >
+        
+          
+          <label class="md-nav__link" for="__nav_31" id="__nav_31_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MICRO2024 GPU NoC
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_31_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_31">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MICRO2024 GPU NoC
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2024-GPU-NoC/original/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uncovering Real GPU NoC Characteristics: Implications on Interconnect Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2024-GPU-NoC/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uncovering Real GPU NoC Characteristics: Implications on Interconnect Architecture 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2024-GPU-NoC/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uncovering Real GPU NoC Characteristics: Implications on Interconnect Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_32" >
+        
+          
+          <label class="md-nav__link" for="__nav_32" id="__nav_32_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MICRO2024 OverSynchronization
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_32_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_32">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MICRO2024 OverSynchronization
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2024-OverSynchronization/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Over-synchronization in GPU Programs 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2024-OverSynchronization/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Over-synchronization in GPU Programs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_33" >
+        
+          
+          <label class="md-nav__link" for="__nav_33" id="__nav_33_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MICRO2025 LEGOSim
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_33_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_33">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MICRO2025 LEGOSim
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2025-LEGOSim/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LEGOSim: A Unified Parallel Simulation Framework for Multi-chiplet Heterogeneous Integration 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2025-LEGOSim/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LEGOSim: A Unified Parallel Simulation Framework for Multi-chiplet Heterogeneous Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_34" >
+        
+          
+          <label class="md-nav__link" for="__nav_34" id="__nav_34_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MICRO2025 SkipReduce
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_34_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_34">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MICRO2025 SkipReduce
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2025-SkipReduce/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SkipReduce: (Interconnection) Network Sparsity to Accelerate Distributed Machine Learning 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MICRO2025-SkipReduce/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SkipReduce: (Interconnection) Network Sparsity to Accelerate Distributed Machine Learning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_35" >
+        
+          
+          <label class="md-nav__link" for="__nav_35" id="__nav_35_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NVIDIAVeraRubin
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_35_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_35">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    NVIDIAVeraRubin
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../NVIDIAVeraRubin/NVIDIA_Vera_Rubin_Platform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inside the NVIDIA Vera Rubin Platform: Six New Chips, One AI Supercomputer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_36" >
+        
+          
+          <label class="md-nav__link" for="__nav_36" id="__nav_36_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAI2026 MRC SRv6
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_36_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_36">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    OpenAI2026 MRC SRv6
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../OpenAI2026-MRC-SRv6/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilient AI Supercomputer Networking using MRC and SRv6 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_37" >
+        
+          
+          <label class="md-nav__link" for="__nav_37" id="__nav_37_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PACMPL2018 OOTA
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_37_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_37">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    PACMPL2018 OOTA
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PACMPL2018-OOTA/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Towards Understanding the Costs of Avoiding Out-of-Thin-Air Results 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PACMPL2018-OOTA/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Towards Understanding the Costs of Avoiding Out-of-Thin-Air Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_38" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_38" id="__nav_38_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POMACS2026 LPGSim
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_38_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_38">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    POMACS2026 LPGSim
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../doc2x/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LPGSim: A Lightweight Parallel GPU Simulator Maximizing Speed with Trustworthy Simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LPGSim: A Lightweight Parallel GPU Simulator Maximizing Speed with Trustworthy Simulation 深度解读
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LPGSim: A Lightweight Parallel GPU Simulator Maximizing Speed with Trustworthy Simulation 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        一、问题定义（Problem）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="一、问题定义（Problem）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gpu-gpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        背景：模拟 GPU 为什么比运行 GPU 慢这么多
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        动机评估与核心 Insight
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        二、相关工作（Related Work）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#challenges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三、技术挑战（Challenges）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        四、解决方案（Solution）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="四、解决方案（Solution）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        整体思路与贯穿示例
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-compute-dep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. COMPUTE 与 DEP：压缩描述，不跳过计算指令所占的发射机会
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 存储系统保持详细：保留示例中真正决定等待的服务路径
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 子系统、双缓冲和局部时钟：只等待请求来源
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-numa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. NUMA 分组与互连并行：把协调热点拆开
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 放宽时钟差与批量周期：明确用精度换等待时间
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与既有方案的关系
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#experiments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        五、实验评估（Experiments）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="五、实验评估（Experiments）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        实验设定与结果口径
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 基础准确性：周期约 22% 误差，内存计数更准确
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-997" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 单线程速度：9.97× 的来源不只是代码重写
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 并行扩展：每消除一个瓶颈，另一个瓶颈浮现
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-kernel-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 精度代价：长 kernel 的结论不能平移给短 kernel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 端到端开销与证据边界
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#side-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        六、附加洞察（Side Findings）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wrap-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        七、总结与个人评价（Wrap-up）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#structure-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        八、章节脉络与段落速览（Structure Map）
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LPGSim: A Lightweight Parallel GPU Simulator Maximizing Speed with Trustworthy Simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_39" >
+        
+          
+          <label class="md-nav__link" for="__nav_39" id="__nav_39_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SC2021 UVM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_39_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_39">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SC2021 UVM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SC2021-UVM/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Depth Analyses of Unified Virtual Memory System for GPU Accelerated Computing 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SC2021-UVM/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_40" >
+        
+          
+          <label class="md-nav__link" for="__nav_40" id="__nav_40_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SIGCOMM2025 NSX
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_40_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_40">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SIGCOMM2025 NSX
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SIGCOMM2025-NSX/doc2x/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NSX: Large-Scale Network Simulation on an AI Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SIGCOMM2025-NSX/figure-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NSX figure plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SIGCOMM2025-NSX/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NSX: Large-Scale Network Simulation on an AI Server 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SIGCOMM2025-NSX/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NSX: Large-Scale Network Simulation on an AI Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_41" >
+        
+          
+          <label class="md-nav__link" for="__nav_41" id="__nav_41_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TPDS2019 GPU Interconnect
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_41_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_41">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TPDS2019 GPU Interconnect
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TPDS2019-GPU-Interconnect/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluating Modern GPU Interconnect: PCIe, NVLink, NV-SLI, NVSwitch and GPUDirect 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../TPDS2019-GPU-Interconnect/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluating Modern GPU Interconnect: PCIe, NVLink, NV-SLI, NVSwitch and GPUDirect
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_42" >
+        
+          
+          <label class="md-nav__link" for="__nav_42" id="__nav_42_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UALink Spec
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_42_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_42">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    UALink Spec
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../UALink-Spec/chap1_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap1 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../UALink-Spec/chap2_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap2 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../UALink-Spec/chap3_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap3 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../UALink-Spec/chap4_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap4 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../UALink-Spec/chap5_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap5 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../UALink-Spec/chap6_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap6 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_43" >
+        
+          
+          <label class="md-nav__link" for="__nav_43" id="__nav_43_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    US11233730 p9
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_43_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_43">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    US11233730 p9
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../US11233730-p9/paper_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_44" >
+        
+          
+          <label class="md-nav__link" for="__nav_44" id="__nav_44_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    US20230229599A1 MulticastReflectiveMemory
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_44_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_44">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    US20230229599A1 MulticastReflectiveMemory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../US20230229599A1-MulticastReflectiveMemory/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multicast and Reflective Memory Behavior for Memory Model Consistency 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../US20230229599A1-MulticastReflectiveMemory/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_45" >
+        
+          
+          <label class="md-nav__link" for="__nav_45" id="__nav_45_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2015 NWayMemoryBarrierCoalescing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_45_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_45">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2015 NWayMemoryBarrierCoalescing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2015-NWayMemoryBarrierCoalescing/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    N-WAY MEMORY BARRIER OPERATION COALESCING 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2015-NWayMemoryBarrierCoalescing/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_46" >
+        
+          
+          <label class="md-nav__link" for="__nav_46" id="__nav_46_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2018 PacketizedLinkReplay
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_46_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_46">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2018 PacketizedLinkReplay
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2018-PacketizedLinkReplay/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SYSTEM AND METHOD FOR ENABLING REPLAY USING A PACKETIZED LINK PROTOCOL 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2018-PacketizedLinkReplay/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_47" >
+        
+          
+          <label class="md-nav__link" for="__nav_47" id="__nav_47_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2022 InterconnectedSystemsFenceMechanism
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_47_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_47">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2022 InterconnectedSystemsFenceMechanism
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2022-InterconnectedSystemsFenceMechanism/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    INTERCONNECTED SYSTEMS FENCE MECHANISM 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2022-InterconnectedSystemsFenceMechanism/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_48" >
+        
+          
+          <label class="md-nav__link" for="__nav_48" id="__nav_48_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2023 AsyncTransactionBarrier
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_48_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_48">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2023 AsyncTransactionBarrier
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-AsyncTransactionBarrier/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HARDWARE ACCELERATED SYNCHRONIZATION WITH ASYNCHRONOUS TRANSACTION SUPPORT 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-AsyncTransactionBarrier/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_49" >
+        
+          
+          <label class="md-nav__link" for="__nav_49" id="__nav_49_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2023 FabricAttachedMemory
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_49_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_49">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2023 FabricAttachedMemory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-FabricAttachedMemory/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Techniques for an Efficient Fabric Attached Memory 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-FabricAttachedMemory/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_50" >
+        
+          
+          <label class="md-nav__link" for="__nav_50" id="__nav_50_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2023 FastDataSynchronization
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_50_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_50">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2023 FastDataSynchronization
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-FastDataSynchronization/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fast Data Synchronization in Processors and Memory 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-FastDataSynchronization/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_51" >
+        
+          
+          <label class="md-nav__link" for="__nav_51" id="__nav_51_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2023 MulticastBarrier
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_51_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_51">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2023 MulticastBarrier
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-MulticastBarrier/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EFFICIENT MULTI-DEVICE SYNCHRONIZATION BARRIERS USING MULTICASTING 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-MulticastBarrier/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_52" >
+        
+          
+          <label class="md-nav__link" for="__nav_52" id="__nav_52_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2023 TransceiverReliabilityOrdering
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_52_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_52">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2023 TransceiverReliabilityOrdering
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-TransceiverReliabilityOrdering/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transceiver system with end-to-end reliability and ordering protocols 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2023-TransceiverReliabilityOrdering/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_53" >
+        
+          
+          <label class="md-nav__link" for="__nav_53" id="__nav_53_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    USPatent2024 SelfSyncRemoteMemoryOps
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_53_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_53">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    USPatent2024 SelfSyncRemoteMemoryOps
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2024-SelfSyncRemoteMemoryOps/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SELF-SYNCHRONIZING REMOTE MEMORY OPERATIONS IN A MULTIPROCESSOR SYSTEM 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../USPatent2024-SelfSyncRemoteMemoryOps/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_54" >
+        
+          
+          <label class="md-nav__link" for="__nav_54" id="__nav_54_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A primer on mem consistency and cache coherence
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_54_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_54">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    A primer on mem consistency and cache coherence
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../a_primer_on_mem_consistency_and_cache_coherence/U10_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    U10 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../a_primer_on_mem_consistency_and_cache_coherence/U2_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    U2 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../a_primer_on_mem_consistency_and_cache_coherence/U3_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    U3 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../a_primer_on_mem_consistency_and_cache_coherence/U4_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    U4 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../a_primer_on_mem_consistency_and_cache_coherence/U5_translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    U5 translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../a_primer_on_mem_consistency_and_cache_coherence/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Translated
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_55" >
+        
+          
+          <label class="md-nav__link" for="__nav_55" id="__nav_55_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2024 FLUX
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_55_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_55">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2024 FLUX
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2024-FLUX/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FLUX: Fast Software-Based Communication Overlap on GPUs through Kernel Fusion 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2024-FLUX/source/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FLUX: FAST SOFTWARE-BASED COMMUNICATION OVERLAP ON GPUS THROUGH KERNEL FUSION
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2024-FLUX/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FLUX: FAST SOFTWARE-BASED COMMUNICATION OVERLAP ON GPUS THROUGH KERNEL FUSION
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_56" >
+        
+          
+          <label class="md-nav__link" for="__nav_56" id="__nav_56_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2025 MMA
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_56_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_56">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2025 MMA
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2025-MMA/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MultiPath Transfer Engine: Breaking GPU and Host-Memory Bandwidth Bottlenecks in LLM Services 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_57" >
+        
+          
+          <label class="md-nav__link" for="__nav_57" id="__nav_57_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 ASTRA sim 3.0
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_57_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_57">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 ASTRA sim 3.0
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-ASTRA-sim-3.0/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASTRA-sim 3.0: Next-Level Distributed Machine Learning Simulations via High-Fidelity GPU and Infrastructure Modeling 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-ASTRA-sim-3.0/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASTRA-sim 3.0: Next-Level Distributed Machine Learning Simulations via High-Fidelity GPU and Infrastructure Modeling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_58" >
+        
+          
+          <label class="md-nav__link" for="__nav_58" id="__nav_58_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 DWDP
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_58_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_58">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 DWDP
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-DWDP/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DWDP: Distributed Weight Data Parallelism for High-Performance LLM Inference on NVL72 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_59" >
+        
+          
+          <label class="md-nav__link" for="__nav_59" id="__nav_59_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 DieScalingGPUScheduling
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_59_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_59">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 DieScalingGPUScheduling
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-DieScalingGPUScheduling/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dissecting How Die Scaling Breaks GPU Fine-grained Scheduling 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-DieScalingGPUScheduling/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dissecting How Die Scaling Breaks GPU Fine-grained Scheduling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_60" >
+        
+          
+          <label class="md-nav__link" for="__nav_60" id="__nav_60_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 EveryMicrosecondMatters
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_60_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_60">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 EveryMicrosecondMatters
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-EveryMicrosecondMatters/original/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Every \({\mu s}\) Matters: Achieving Near Speed-of-Light Latency in GPU Collectives
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-EveryMicrosecondMatters/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Every μs Matters: Achieving Near Speed-of-Light Latency in GPU Collectives 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-EveryMicrosecondMatters/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Every \({\mu s}\) Matters: Achieving Near Speed-of-Light Latency in GPU Collectives
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_61" >
+        
+          
+          <label class="md-nav__link" for="__nav_61" id="__nav_61_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 GPU Initiated Communication
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_61_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_61">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 GPU Initiated Communication
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-GPU-Initiated-Communication/original/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU-Initiated Communication: Dissecting Down to the Bone
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-GPU-Initiated-Communication/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU-Initiated Communication: Dissecting Down to the Bone 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-GPU-Initiated-Communication/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU-Initiated Communication: Dissecting Down to the Bone
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_62" >
+        
+          
+          <label class="md-nav__link" for="__nav_62" id="__nav_62_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 NVIDIA Command Streams
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_62_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_62">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 NVIDIA Command Streams
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-NVIDIA-Command-Streams/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Revealing NVIDIA Closed-Source Driver Command Streams for CPU-GPU Runtime Behavior Insight 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-NVIDIA-Command-Streams/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Revealing NVIDIA Closed-Source Driver Command Streams for CPU-GPU Runtime Behavior Insight
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_63" >
+        
+          
+          <label class="md-nav__link" for="__nav_63" id="__nav_63_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 RAT Overheads
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_63_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_63">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 RAT Overheads
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-RAT-Overheads/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analyzing Reverse Address Translation Overheads in Multi-GPU Scale-Up Pods 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-RAT-Overheads/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analyzing Reverse Address Translation Overheads in Multi-GPU Scale-Up Pods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_64" >
+        
+          
+          <label class="md-nav__link" for="__nav_64" id="__nav_64_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    arXiv2026 SplitQ
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_64_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_64">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    arXiv2026 SplitQ
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-SplitQ/paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Breaking Modality Heterogeneity in Low-Bit Quantization for Large Vision-Language Models 深度解读
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arXiv2026-SplitQ/translated/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Breaking Modality Heterogeneity in Low-Bit Quantization for Large Vision-Language Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_65" >
+        
+          
+          <label class="md-nav__link" for="__nav_65" id="__nav_65_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flow control
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_65_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_65">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Flow control
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../flow_control/chap12/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap12
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../flow_control/chap13/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap13
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../flow_control/chap14/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap14
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../flow_control/chap15/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chap15
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        一、问题定义（Problem）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="一、问题定义（Problem）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gpu-gpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        背景：模拟 GPU 为什么比运行 GPU 慢这么多
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        动机评估与核心 Insight
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        二、相关工作（Related Work）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#challenges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三、技术挑战（Challenges）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        四、解决方案（Solution）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="四、解决方案（Solution）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        整体思路与贯穿示例
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-compute-dep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. COMPUTE 与 DEP：压缩描述，不跳过计算指令所占的发射机会
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 存储系统保持详细：保留示例中真正决定等待的服务路径
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 子系统、双缓冲和局部时钟：只等待请求来源
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-numa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. NUMA 分组与互连并行：把协调热点拆开
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 放宽时钟差与批量周期：明确用精度换等待时间
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与既有方案的关系
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#experiments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        五、实验评估（Experiments）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="五、实验评估（Experiments）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        实验设定与结果口径
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 基础准确性：周期约 22% 误差，内存计数更准确
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-997" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 单线程速度：9.97× 的来源不只是代码重写
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 并行扩展：每消除一个瓶颈，另一个瓶颈浮现
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-kernel-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 精度代价：长 kernel 的结论不能平移给短 kernel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 端到端开销与证据边界
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#side-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        六、附加洞察（Side Findings）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wrap-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        七、总结与个人评价（Wrap-up）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#structure-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        八、章节脉络与段落速览（Structure Map）
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="lpgsim-a-lightweight-parallel-gpu-simulator-maximizing-speed-with-trustworthy-simulation">LPGSim: A Lightweight Parallel GPU Simulator Maximizing Speed with Trustworthy Simulation 深度解读</h1>
+<blockquote>
+<p><strong>作者</strong>：Hyunwoo Nam、Jay Hwan Lee、Yeonsoo Kim、Mengzhao Zhang、Jeonggeun Kim、Bernd Burgstaller。<br />
+<strong>期刊</strong>：Proceedings of the ACM on Measurement and Analysis of Computing Systems（POMACS），2026，10(2)，Article 44，27 页。<br />
+<strong>DOI</strong>：10.1145/3805642。<br />
+<strong>一句话总结</strong>：LPGSim 用“保留访存时序与依赖、压缩计算细节”的混合精度模型降低单线程成本，再通过局部时钟、NUMA 分组及有代价的同步放宽加速并行仿真，把研究重点从逐部件复刻转向可承受时间内的 GPU 性能趋势分析。</p>
+</blockquote>
+<h2 id="problem">一、问题定义（Problem）</h2>
+<h3 id="gpu-gpu">背景：模拟 GPU 为什么比运行 GPU 慢这么多</h3>
+<p>GPU 以 warp 为调度单位，在大量 streaming multiprocessor（SM）上并发执行线程块。计算指令访问寄存器和执行单元，访存指令经过 L1、互连、L2 和 DRAM；一次 load 是否命中、返回时间及其后续指令的数据依赖，共同决定一个 warp 何时可以继续。Cycle-level simulator 在 CPU 上逐模拟周期维护这些状态，才能回答“修改 cache、内存时序或调度策略后，性能怎样变化”。因此，目标 GPU 的并行性越强，模拟器每周期需要维护的部件越多，模拟时间就越难承受。</p>
+<p>本文属于<strong>改进型工作</strong>。已有 Accel-Sim 等模拟器通过详细流水线和存储系统获得较高准确性，但大工作负载的模拟很慢；已有加速方向包括简化模型、并行化 SM 和使用解析模型。问题在于：删错细节会失去性能可信度，只并行 SM 又会被互连串行路径和全局屏障限制。作者在 §2.3 引用既有研究的约五百万倍实机时间差距，以及 16 线程仅 5.8× 的 fork-join 加速，说明需求并非人为制造；这些数字是<strong>引用的背景证据，不是 LPGSim 本文测出的结果</strong>。</p>
+<p>本文希望同时回答两个问题：哪些模型细节值得保留，哪些主机同步值得支付？第一层是 GPU 模型的精度预算，第二层是 CPU 并行执行的协调成本。论文追求的“trustworthy”主要体现为周期趋势和内存计数的可用性，并不意味着所有工作负载都具有低误差，更不等于功能正确性验证。</p>
+<h3 id="insight">动机评估与核心 Insight</h3>
+<p><strong>动机总体扎实，但适用假设有边界。</strong> §2.2 综合既有观察指出，SM 占据大部分模拟时间，而 memory system 对现代 HPC/ML 负载的准确性至关重要。因而可以压缩计算模型，同时细致保留访存行为。本文动机章节没有独立的新 profiling 图；后文 Fig.7 才提供 SM 时间占比及加速分解。不能把“大量现代负载受内存约束”推成“所有计算依赖都无关紧要”，特别是长延迟计算、专用单元和计算依赖链可能成为主要瓶颈。</p>
+<p><strong>核心 Insight 是保留因果关系中最值钱的部分。</strong> 在 GPU 模型中，保留由未完成访存引起的等待，统一处理其余计算；在并行模拟中，一个部件只需要等真正向它交付请求的邻居，不必等整个 GPU；在主机 NUMA 层面，少量动态均衡应服从数据局部性。最后，对于足够长的 kernel，可以容忍有限模拟时钟偏差来换取吞吐，但短 kernel 的起止误差会被放大。这些观察串起全文，而不是互不相关的若干优化。</p>
+<h2 id="related-work">二、相关工作（Related Work）</h2>
+<p>论文在 §2 和 §8 按<strong>建模方法与加速路径</strong>展开相关工作，可归纳成四条脉络。</p>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>核心方法及代表</th>
+<th>留给 LPGSim 的空间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>详细周期级模拟</td>
+<td>GPGPU-Sim 采用 PTX execution-driven 模式；Accel-Sim 引入 NVBit 采集的 SASS trace；其他工作扩展架构、异构系统或多 GPU 支持</td>
+<td>能研究微架构，但逐指令、多执行单元及完整依赖维护很贵</td>
+</tr>
+<tr>
+<td>降低模型复杂度</td>
+<td>Jain 等强调存储系统准确性；NVArchSim/Need for Speed 比较不跟踪依赖、单 outstanding load、完整依赖及互连精度</td>
+<td>LPGSim 进一步选择“只跟踪访存指令相关依赖”，并把 trace 改造成 COMPUTE/DEP 表示</td>
+</tr>
+<tr>
+<td>并行周期级模拟</td>
+<td>以 SM/计算单元为并行任务，常用 fork-join；另有只模拟功能的并行模拟器</td>
+<td>L2/DRAM/互连串行部分与全局同步限制扩展；功能模拟加速不能直接代替时序模拟</td>
+</tr>
+<tr>
+<td>解析、采样与学习模型</td>
+<td>interval 模型估计停顿，reuse-distance 模型预测 cache，principal kernel analysis 选代表 kernel，ML 模型预测性能</td>
+<td>估计速度快，但细粒度新微架构仍需要可修改的周期级模型；论文认为两者可组合</td>
+</tr>
+</tbody>
+</table>
+<p>创新并不在于首次提出“简化”或“并行”，而在于为二者选定共同的系统边界：保留详细存储系统，把 SM、memory 和 interconnect 都变成可并行对象。需要保留一个细节：本文实验中的 fork-join 基线已额外并行 memory 子系统，因此与它比较时，主要剩余串行对象是互连，不能把该基线描述成只并行 SM 的原始实现。</p>
+<h2 id="challenges">三、技术挑战（Challenges）</h2>
+<ol>
+<li><strong>怎样省掉计算模拟，又不让访存消费者提前执行？</strong> 删除所有寄存器依赖会放过尚未返回的 load；完整 scoreboard 又失去轻量化意义。需要在 trace 和执行模型之间共同定义必要信息。</li>
+<li><strong>怎样让互连也并行，同时不制造同周期数据竞争？</strong> SM/L1 和 L2/DRAM 通过共享端口、请求缓冲区与互连交换消息。若读写没有时间边界，结果会依赖主机线程碰巧的执行顺序。</li>
+<li><strong>怎样让任务均衡，而不在 NUMA 上反复搬状态？</strong> 每周期动态分配能少等慢任务，却可能让子系统状态在 CPU cache 和插槽之间移动；集中式互连还要读取所有其他线程的请求及局部时钟。</li>
+<li><strong>怎样处理周期工作量方差，而不无限放松时序？</strong> cache hit/miss 等不同路径造成模拟周期成本剧烈变化。Table 1 中 CF 的 SM 单周期均值仅 3.37 μs、标准差却为 14.45 μs，3MM 为 3.25/12.50 μs；按平均工作量分配并不能消除逐周期等待。容许时钟偏差能缓解等待，但 kernel 起止阶段会积累误差。</li>
+</ol>
+<p>这里始终有两个“时间”：<strong>模拟周期</strong>描述目标 GPU 进度，<strong>主机耗时</strong>描述 CPU 算出这些周期要多久。后文的局部时钟记录前者，优化目标是后者；二者混淆会把加速和预测误差误读成同一个指标。</p>
+<h2 id="solution">四、解决方案（Solution）</h2>
+<h3 id="_1">整体思路与贯穿示例</h3>
+<p><img alt="Fig.1：LPGSim 工具链与简化核心流水线" src="../images/fig01.jpg" /></p>
+<p>Fig.1 的颜色分出混合精度边界：计算核心和互连较简化，L1/L2/DRAM 较详细。NVBit 从真实 CUDA 执行采集 SASS，转换器合并计算指令并保留访存依赖，压缩后的 trace 驱动模拟器。issue 阶段保留 warp scheduler 和轻量 dependency tracker，execute 阶段只有 universal unit 与 load/store（LDST）单元，最后在 writeback 释放访存依赖。寄存器文件和 read operands 阶段被省去。</p>
+<p><strong>贯穿示例（为解释构造，不是论文 benchmark）</strong>：一个处理数组的 kernel 有许多线程块，每个 warp 反复执行“加载 A[i] → 做两条不依赖该 load 的地址/整数计算 → 使用 A[i] 做计算 → 加载另一数据 → 写结果”。线程块分散到很多 SM，访存经过不同 L2/DRAM 分区；在主机上，由多个 CPU 线程共同模拟。我们依次看如何压缩这段程序、保证 load 等待、并行运送请求，再解释长短 kernel 为什么表现不同。</p>
+<h3 id="1-compute-dep">1. COMPUTE 与 DEP：压缩描述，不跳过计算指令所占的发射机会</h3>
+<p>对示例中“load → 两条独立计算 → 消费 load”的局部序列，概念上转换成：</p>
+<pre><code class="language-text">LDG R3, [A+i]     保留访存指令及访存所需信息
+COMPUTE 2        合并两条不依赖该未完成load的计算指令
+DEP R3           原来消费R3的那条计算指令，仍要等load返回
+</code></pre>
+<p><img alt="Fig.2：访存—访存和访存—计算依赖的 trace 转换" src="../images/fig02.jpg" /></p>
+<p>Fig.2(a) 中两条计算之间虽然有寄存器依赖，也会被合并；最后一条 load 对前一条 load 的依赖仍保留。Fig.2(b) 的最后一条计算依赖 R3，因此转换成 DEP R3。这直接回应挑战 1：删除的是详细计算元数据与计算—计算依赖，不是所有依赖。</p>
+<p><code>COMPUTE 2</code> <strong>不表示一个周期完成两条计算</strong>。issue 每次减少计数器并向 universal unit 送出一条合成计算指令，计数归零才读取下一条 trace。DEP 同样经通用计算路径，但发射前检查未完成访存的寄存器依赖；依赖未解开就停住该 warp，让 scheduler 选择其他 warp。访存指令走 LDST 路径，完成后在 writeback 清除记录。因此，示例中 A[i] 没回来时，消费者不能因为 trace 被压缩而直接发射。</p>
+<p>代价也很明确：实际计算指令的专用执行资源、长延迟计算和计算—计算相关停顿不再被详细表达。本文不是重新计算数据值的功能模拟，访存地址等来自既有 trace，所以该办法也不能证明新设计下程序的功能正确性。</p>
+<h3 id="2">2. 存储系统保持详细：保留示例中真正决定等待的服务路径</h3>
+<p>L1 支持 banked、sectored cache 和可调整的 shared-memory/data-cache 分配；L2 使用不可约多项式 hash 缓解 partition camping，提供可配置 transaction size，并建模 A100 的 L2 分区；DRAM 保留时序及结构配置，可描述 GDDR/HBM。因而示例中两个 load 是否争同一 bank、是否落在不同 L2 分区、何时从 DRAM 返回，仍能影响模拟时序。</p>
+<p>这种选择回应挑战 1 的另一半：只保留依赖还不够，依赖什么时候解除也必须足够可信。互连则主要捕捉带宽和延迟效应，并不进行完整包级网络仿真，因此对精细路由、仲裁和拥塞机制的研究能力仍有限。</p>
+<p>trace 先做地址 base/stride 压缩，再用 Zstandard 压缩。这里应区分三件事：计算合并降低表示复杂度，地址及通用压缩降低容量，流水线简化降低模拟工作量；文件更小不等于已经证明采集/转换的端到端时间更短。</p>
+<h3 id="3">3. 子系统、双缓冲和局部时钟：只等待请求来源</h3>
+<p>LPGSim 划分三类任务：SM 与其私有 L1 构成 SM 子系统，某 memory subpartition 内的 L2 与 DRAM 构成 memory 子系统，二者之间另有 interconnect 子系统。示例中每个 SM 可独立更新内部流水线，不同存储分区也可独立服务请求；通信是必须协调的边界。</p>
+<p><img alt="Fig.3(a)：子系统划分与交替缓冲区的读写" src="../images/fig03.jpg" /></p>
+<p>Fig.3(a) 显示请求跨子系统时采用双缓冲：本周期写入新请求，读取上一周期留下的请求，下一周期交换缓冲角色。这让同周期的内部模拟无需同时读写同一请求缓冲，回应挑战 2。<strong>当前导出的本地图仅含 Fig.3(a)</strong>；原文 Fig.3(b) 的时间线在 Markdown 中被拆为文本，它比较 fork-join 与 local-clock 两个周期的调度，含义如下。</p>
+<p>在严格模式下，模拟第 N 个周期前，只要相关互连已经完成第 N−1 周期，SM 就能看见该看的请求；它无需等无直接通信关系的另一个 SM 完成全局屏障。每个子系统维护 local clock，线程检查依赖子系统的进度，满足条件后模拟并更新本地进度。这样既把互连从串行阶段移到并行任务中，又去掉与无关任务共同等待的屏障。这里取消的是<strong>全局同步</strong>，局部因果依赖检查仍然存在。</p>
+<p>Algorithm 1 还允许静态和动态任务并存：线程先处理绑定的子系统，再获取所属线程组中的动态任务。实现采用尽量均匀静态绑定、余数作为动态任务的策略，使负载均衡不必以每个周期搬迁所有状态为代价。</p>
+<h3 id="4-numa">4. NUMA 分组与互连并行：把协调热点拆开</h3>
+<p>把示例扩展到两个 CPU 插槽后，一个互连线程要访问全部 SM/L2 请求队列和 local clock，cache coherence 与远程访问会把它变成热点。若所有子系统都能在任意线程之间迁移，先前的动态均衡收益也可能被数据移动抵消。</p>
+<p>LPGSim 把线程和动态任务划入多个组，每组线程位于同一 socket；动态子系统只在所属组内调度。互连也拆为每组的 sub-interconnect，分别处理本组来源请求并仲裁。多个 sub-interconnect 可能同时发往同一目标，故通信缓冲改为使用 CAS 的 concurrent queue，以保证并发访问安全。</p>
+<p>这回应挑战 3，但应区分<strong>无数据竞争</strong>和<strong>完全复现串行仲裁顺序</strong>：CAS 队列解决前者，不保证后者。作者承认独立仲裁的顺序变化会带来小幅准确性损失。因此，不能把“所有并行化都不改变模型结果”作为本文结论。</p>
+<h3 id="5">5. 放宽时钟差与批量周期：明确用精度换等待时间</h3>
+<p>前述机制仍会等到依赖子系统足够接近。针对挑战 4，作者添加两个旋钮：允许局部时钟与依赖方相差一定 threshold；以及每次调用连续模拟 bsize 个周期再更新进度，减少逐周期检查、任务切换和方差影响。Algorithm 1 伪代码默认 threshold=0、bsize=1；实验图把 threshold=1 作为对应既有配置的起点，两处计数口径不宜强行等同。</p>
+<p>回到数组示例：若 kernel 有大量线程块、运行很久，起步和收尾错开少量周期，相对总周期可能很小；若 kernel 只有很少工作，起止阶段就可能占很大比例。尤其某线程上的 SM 已结束、但 memory 仍服务其他线程请求时，该线程每周期工作骤减，局部时钟可能快速超前，产生额外尾部周期。因而“让线程快跑”并非总能缩短整体模拟，阈值和 batch 都需要控制。</p>
+<h3 id="_2">与既有方案的关系</h3>
+<p>LPGSim 的优点是模型表示、任务边界和主机局部性协同设计。相比只优化某个 C++ 热点，它减少需要模拟的工作；相比仅并行 SM，它覆盖 memory 和互连；相比全局任意任务迁移，它尊重 NUMA 局部性。局限则来自同一组选择：无法研究已删去的执行单元细节，且较激进并行配置的误差必须按 workload 重新检查。</p>
+<h2 id="experiments">五、实验评估（Experiments）</h2>
+<h3 id="_3">实验设定与结果口径</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>论文设置及阅读注意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工作负载</td>
+<td>Rodinia、Parboil、PolyBench、DeepBench、MLPerf Inference 4.1；MLPerf 含 BERT、ResNet50</td>
+</tr>
+<tr>
+<td>实验子集</td>
+<td>Table 2 分 Acc.、Comp.、Par.；不是所有 benchmark 参加每项实验，MLPerf 参加准确性/并行实验，但未参加 Accel-Sim 速度比较</td>
+</tr>
+<tr>
+<td>真实 GPU</td>
+<td>V100：80 SM、6 MB L2、HBM2；A100：108 SM、40 MB L2、HBM2e；RTX 3090：82 SM、6 MB L2、GDDR6X</td>
+</tr>
+<tr>
+<td>软件</td>
+<td>NVCC 12.4、cuDNN 9.1.0、NVBit 1.7.2、GCC 12.4.0、Nsight Compute 2024.1.1.0</td>
+</tr>
+<tr>
+<td>性能目标配置</td>
+<td>以 RTX 3090 配置比较模拟器主机运行时间</td>
+</tr>
+<tr>
+<td>CPU 平台</td>
+<td>文中报告双路 Xeon E5-2697 v3、总内存 512 GiB，并使用 28/56 线程配置；原文同时写每插槽 28 physical cores，未进一步澄清核心/线程口径，本文不据此推断物理核效率</td>
+</tr>
+<tr>
+<td>准确性指标</td>
+<td>cycles 用文中定义的百分比 MAE；load/store、cache/DRAM 计数用 NRMSE，另报标准差和 Pearson correlation</td>
+</tr>
+<tr>
+<td>性能基线</td>
+<td>单线程 LPGSim 对 Accel-Sim；并行 LPGSim 对其自身单线程；fork-join 是作者实现且已并行 memory 的对照</td>
+</tr>
+</tbody>
+</table>
+<p>§6.1 的准确性测试<strong>关闭 §4.3 的同步放宽</strong>，不能直接贴到最高加速配置。§6.2 则另外考察放宽同步后的误差。本文把前者称为基础准确性，把后者称为并行配置的附加误差，避免混用。</p>
+<p>论文用 AOSP（approximated occupancy-based speedup）解释工作负载的并行潜力：在 Amdahl 思路中，以 <code>线程数 × occupancy</code> 近似有效并行度，occupancy 是真实硬件上按执行周期加权的活跃 warp 比例。作者明确说它是启发式指标，<strong>不是可实现加速的理论上界</strong>；公式中的时间项需作归一化比例理解，不能将任意秒数直接代入称作无量纲 speedup。</p>
+<h3 id="1-22">1. 基础准确性：周期约 22% 误差，内存计数更准确</h3>
+<table>
+<thead>
+<tr>
+<th>GPU</th>
+<th style="text-align: right;">周期 MAE</th>
+<th style="text-align: right;">周期标准差</th>
+<th style="text-align: right;">周期 Pearson r</th>
+<th style="text-align: right;">L1 read miss NRMSE</th>
+<th style="text-align: right;">L2 read miss NRMSE</th>
+<th style="text-align: right;">DRAM read NRMSE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V100</td>
+<td style="text-align: right;">21.4%</td>
+<td style="text-align: right;">18.0%</td>
+<td style="text-align: right;">0.98</td>
+<td style="text-align: right;">5.22%</td>
+<td style="text-align: right;">5.40%</td>
+<td style="text-align: right;">1.14%</td>
+</tr>
+<tr>
+<td>A100</td>
+<td style="text-align: right;">23.3%</td>
+<td style="text-align: right;">20.2%</td>
+<td style="text-align: right;">0.97</td>
+<td style="text-align: right;">6.19%</td>
+<td style="text-align: right;">4.15%</td>
+<td style="text-align: right;">0.35%</td>
+</tr>
+<tr>
+<td>RTX 3090</td>
+<td style="text-align: right;">22.7%</td>
+<td style="text-align: right;">21.6%</td>
+<td style="text-align: right;">0.98</td>
+<td style="text-align: right;">6.89%</td>
+<td style="text-align: right;">4.90%</td>
+<td style="text-align: right;">5.47%</td>
+</tr>
+</tbody>
+</table>
+<p>Table 5 还显示 load 指令计数 NRMSE 均为 0.01%，store 为 0.04%–0.05%，L1 write 为 0.02%。这些数字支持访存事件及存储行为建模的可信度，但周期标准差说明单个 workload 偏差可能显著，不能将平均值当作逐 workload 保证。</p>
+<p><img alt="Fig.4：真实硬件与 LPGSim 的部分关键指标相关性" src="../images/fig04.jpg" /></p>
+<p>Fig.4 在对数坐标上比较硬件与模拟值。较高相关性表明跨工作负载量级趋势吻合；它不自动证明两个接近候选设计的优劣排序都可靠，也不能抵消约 22% 的周期平均误差。</p>
+<p><img alt="Fig.5：计算受限与存储受限样本的周期误差累计分布" src="../images/fig05.jpg" /></p>
+<p>Fig.5 按 roofline 划分 49 个 compute-bound、158 个 memory-bound 样本，合计跨三种架构的分类结果，不能当作 207 个不同应用。作者观察到计算受限组也没有显著恶化，解释为这些测试中的长延迟/计算相关停顿并不突出。这支持“这批负载可简化”，尚不足以覆盖任意强计算依赖程序。</p>
+<p>Table 6 的同实现消融更有说服力：不跟踪任何寄存器依赖时，LPGSim 平均周期误差约 28%；保留访存依赖后约 22%，改善 <strong>6 个百分点</strong>。No-track 的三架构相关性为 0.96/0.93/0.90，也低于默认的 0.98/0.97/0.98。这直接验证示例中 DEP 不能一并删除。</p>
+<p>同表引用 Accel-Sim 24%、NVArchSim 17% 的既有误差，但 workload 和架构不同。LPGSim 没有自身的详细核心版本作为同配置对照，故这些数只能给背景尺度，<strong>不能证明简化核心仅增加了多少误差，也不能据此宣布比 Accel-Sim 更准确</strong>。</p>
+<h3 id="2-997">2. 单线程速度：9.97× 的来源不只是代码重写</h3>
+<p><img alt="Fig.6：单线程 LPGSim 相对 Accel-Sim 的模拟速度" src="../images/fig06.jpg" /></p>
+<p>Fig.6 在参加 Comp. 的 RTX 3090 配置工作负载上给出平均 <strong>9.97×</strong>。这是模拟器运行速度，不是 GPU 应用加速，也不是包含 trace 生成的端到端加速。</p>
+<p><img alt="Fig.7：Accel-Sim 子系统耗时占比与 LPGSim 分项加速" src="../images/fig07.jpg" /></p>
+<p>对 CF、MR/L、3MM、CI/56 四个 workload，SM、互连、memory 子系统分别平均快 <strong>13.8×、20.8×、1.60×</strong>。memory 没做同类模型简化，作者把它的改善归于独立代码实现；SM/互连则同时受模型简化与实现差异影响。虽然互连相对加速更高，SM 原始时间占比更大，因此核心简化才是整体收益的主要来源。该 profiling 支持归因方向，但不是把每个因素独立开关后的严格消融。</p>
+<h3 id="3_1">3. 并行扩展：每消除一个瓶颈，另一个瓶颈浮现</h3>
+<p>以下 speedup 的分母<strong>全部是单线程 LPGSim</strong>，不能直接和 9.97× 混为一列。</p>
+<table>
+<thead>
+<tr>
+<th>并行方案</th>
+<th style="text-align: right;">28 线程</th>
+<th style="text-align: right;">56 线程</th>
+<th>关键含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fork-join</td>
+<td style="text-align: right;">9.44×</td>
+<td style="text-align: right;">8.37×</td>
+<td>加线程后串行互连和屏障限制更明显</td>
+</tr>
+<tr>
+<td>基础 local-clock</td>
+<td style="text-align: right;">10.6×</td>
+<td style="text-align: right;">7.41×</td>
+<td>单插槽改善，但双插槽协调代价反而更大</td>
+</tr>
+<tr>
+<td>分组与互连并行，各自最佳组数</td>
+<td style="text-align: right;">14.25×（4 组）</td>
+<td style="text-align: right;">12.56×（8 组）</td>
+<td>降低热点和迁移，双插槽仍未超过单插槽</td>
+</tr>
+<tr>
+<td>时钟差 threshold=256</td>
+<td style="text-align: right;">15.88×</td>
+<td style="text-align: right;">16.96×</td>
+<td>该实验使用 8 组；容许有限偏差后双插槽开始获益</td>
+</tr>
+<tr>
+<td>再批量模拟周期</td>
+<td style="text-align: right;">28 线程反而退化</td>
+<td style="text-align: right;">19.8×（batch=4）</td>
+<td>batch 收益依赖主机配置，不能默认越大越好</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Fig.8：fork-join 与 local-clock 随线程数的扩展" src="../images/fig08.jpg" /></p>
+<p><img alt="Fig.9：单个子系统的逐周期主机耗时" src="../images/fig09.jpg" /></p>
+<p>Fig.8 中 56 线程不及 28 线程，是论文重要的反直觉证据；Fig.9 解释为什么“已经全部并行”仍然慢：SM 总时间大，但每个 SM 小，分摊后一个集中式互连的协调成本反而主导。到了双插槽，local-clock 读取与请求交换的跨线程/跨 socket 通信把互连成本进一步抬高。</p>
+<p><img alt="Fig.10：线程分组和互连并行的效果" src="../images/fig10.jpg" /></p>
+<p>Fig.10 的 1 组配置等同未并行互连的 local-clock。组数增加能减轻集中通信，56 线程相对收益尤其明显，但结果仍不意味着分组越多越好；负载均衡、每组任务数和通信成本共同决定最佳点。</p>
+<p><img alt="Fig.11：局部时钟差阈值的速度敏感性" src="../images/fig11.jpg" /></p>
+<p><img alt="Fig.12：批量周期数的速度敏感性" src="../images/fig12.jpg" /></p>
+<p>Fig.11 的阈值扫描为 1、16、256、4096，最佳平均速度在 256；56 线程下 DeepBench 和 MLPerf 分别达到 20.1×、25.6×。Fig.12 从 threshold=256 继续改变 batch=1/2/4/8；单插槽批量化变慢，双插槽在 batch=4 达到 19.8×。对于 MLPerf，作者报告未放宽同步时 15.45×、应用两种放宽后 32.99×，这一子集结果不能代替总体平均值。</p>
+<h3 id="4-kernel-kernel">4. 精度代价：长 kernel 的结论不能平移给短 kernel</h3>
+<p><img alt="Fig.13：时钟差、批量大小与 kernel 长度的误差关系" src="../images/fig13.jpg" /></p>
+<p>按 §6.2 的文字结论，阈值放宽到 256 时误差变化很小，4096 时部分 workload 恶化；增大 batch 对 NN、NW、3D、J2D 等短 kernel 的影响显著。Fig.13(c) 用 <strong>threshold=256、batch=8、56 线程</strong>与单线程比较，发现平均 kernel 周期越短，相对周期差越大。注意它并非最高总体速度所在的 batch=4 配置，且该“相对单线程周期差”不同于“相对真实硬件误差”。</p>
+<p>这里有两处原图表达不一致，值得保留而非替作者修正：Fig.13(a)(b) 纵轴标为 MAE 却出现负数，严格意义上的绝对误差不可能为负；Fig.13(c) 图注称周期为折线、差异为柱形，图内轴标却标注周期为柱形、差异为折线。因此本报告只使用可与正文互证的趋势，不从这张图硬读精确 MAE，也不把图中极值当作一个已明确定义的误差统计量。</p>
+<h3 id="5_1">5. 端到端开销与证据边界</h3>
+<p>Table 3 显示 trace 容量确实可观：MLPerf 原始 trace 平均 <strong>2186.86 GB</strong>、最大 <strong>3911.58 GB</strong>，只做地址压缩后平均 <strong>713.20 GB</strong>，再加 Zstandard 后平均 <strong>12.36 GB</strong>、最大 <strong>19.35 GB</strong>；DeepBench 平均从 <strong>18.16 GB</strong> 降到 <strong>0.06 GB</strong>。这些是存储容量，不是 trace 采集、COMPUTE/DEP 转换、压缩和解压的时间测量。论文没有给出这些阶段的完整耗时分解，因此无法从 9.97× 或 19.8× 推出一次性运行完整工具链的端到端加速；多次复用 trace 做配置探索时，预处理成本才可能被摊薄，这是使用情境推论。</p>
+<p>作者给出总加速 <strong>197.4×</strong>，数值上是约 <code>9.97 × 19.8</code>。但 Comp. 和 Par. 子集并不完全相同，且最高并行速度伴随附加误差；应把它理解为论文按两层平均收益组合出的总量级，不能当作所有 workload 都直接测得的统一端到端加速。</p>
+<p><strong>结论支撑性评价</strong>：多架构、五套 benchmark、存储事件计数和逐层并行实验共同支持“以有界用途换高吞吐”的主张。薄弱处在于：没有同实现完整核心与轻量核心的配对消融；没有展示系统的候选架构排序验证；最高速度配置缺少与基础准确性表同等完整的统计；部分性能实验受时间限制筛选，完整模型仅用 BERT/ResNet50；线程/物理核及 Fig.13 口径需谨慎。以此做存储系统或大 kernel 的早期探索较有根据，用它判断细粒度计算单元改动则超出主要证据范围。</p>
+<h2 id="side-findings">六、附加洞察（Side Findings）</h2>
+<p><strong>结论 1：在已测试的 A100 tensor-core 工作负载中，统一计算单元仍能得到较小周期误差。</strong><br />
+<strong>出处</strong>：§6.1 “Impact of the specialized hardware units”。<br />
+<strong>推理链条</strong>：作者识别出实际用了 tensor core 的五个 benchmark → 它们的 tensor 指令在 LPGSim 中仍全部转换为普通 COMPUTE → CT/341、CT/56、CT/7、BERT、ResNet50 的周期误差分别为 2%、9%、2%、11%、2% → 作者据此判断这组测试里 tensor 指令简化带来的准确性问题有限。薄弱点是没有相同工作负载的详细 tensor pipeline 对照，因此这些是总误差观测，不能严格分离 tensor 简化的独立误差，也不覆盖所有 tensor-heavy kernel。</p>
+<p><strong>结论 2：本实现中 trace 读取不是值得优先并行化的热点。</strong><br />
+<strong>出处</strong>：§4.4 “Implementation Details”。<br />
+<strong>推理链条</strong>：每个 kernel 的一个 trace 文件包含全部线程块 → 多线程读取需要同步避免竞争 → 虽然可以设计并行读取，作者观察到该阶段耗时可忽略 → 因此保留串行/同步读取，把工程精力投入模拟本身。论文未给该阶段量化比例，故这个判断只应限定在其压缩格式、平台和工作负载下，不能推出任何 trace-driven 模拟器的 I/O 都不重要。</p>
+<p><strong>结论 3：轻量核心已丢失核心功耗建模需要的信息，而存储功耗扩展仍有数据基础。</strong><br />
+<strong>出处</strong>：§7 “Power model”。<br />
+<strong>推理链条</strong>：不同计算指令被折叠为统一类型 → 无法恢复每条指令使用的确切执行单元 → 不能统计核心各单元的准确活动及能耗；相反，详细存储系统保留 L1/L2/DRAM 的访问计数和时间 → 可获得访问率，为带估计参数的存储功耗模型提供输入。前半是当前能力边界，后半只是作者论证的可扩展性，本文没有实现或验证完整功耗模型。</p>
+<h2 id="wrap-up">七、总结与个人评价（Wrap-up）</h2>
+<p>LPGSim 的贡献是把“保留哪些因果细节”落实到 trace 格式、核心流水线及并行任务边界：基础周期误差约 21%–23%、相关性约 0.97–0.98，换来相对 Accel-Sim 的 9.97× 单线程加速；再通过分组和同步放宽把并行加速推到相对自身单线程的 19.8×，但需额外承担精度代价。</p>
+<p>最大的亮点是认真展示优化失败的中间状态：local-clock 在双插槽反而更慢，分组还不够，batch 在单插槽也可能退化。最大的不足是“可信”主要依赖跨 benchmark 相关性和若干误差统计，尚未完整证明微架构设计排序的可靠性，轻量核心的精度损失也缺乏同实现配对对照。<strong>个人判断</strong>：下一步最有价值的是建立依赖强度、kernel 长度与同步参数之间的自适应准则，并用相同设计点、相同工作负载和端到端成本做配对验证；这属于报告建议，不是论文已经实现的功能。</p>
+<h2 id="structure-map">八、章节脉络与段落速览（Structure Map）</h2>
+<p>以下按正文自然段编号，编号在每个章节或子小节内重置；公式、算法、表格、图注及贡献列表归入相应段落，不把分页拆出的文字视作新段；图表因版面浮动提前出现时按逻辑所属章节导航。</p>
+<ul>
+<li><strong>Abstract</strong>：概括混合精度与并行化两层加速。</li>
+<li>¶1 说明大规模 workload 需要既可信又足够快的 GPU 模拟器。</li>
+<li>¶2 概述计算元数据压缩、局部时钟并行及精度—速度结果。</li>
+<li><strong>1 Introduction</strong>：提出快而可信的模拟需求并陈述贡献。</li>
+<li>¶1 说明 HPC/ML 增长要求可用于架构探索的工具。</li>
+<li>¶2 对比模型简化和并行化两条加速路线的精度与扩展代价。</li>
+<li>¶3 概述 LPGSim 的轻量核心、详细存储及分层并行方案。</li>
+<li>¶4 汇总实验结果，并以三项贡献列明模型、并行方法与评估覆盖。</li>
+<li><strong>2 Background and Motivation</strong>：建立 GPU 建模方法及性能瓶颈背景。</li>
+<li><strong>2.1 GPU Architecture Simulation</strong>：比较解析建模与周期级模拟。<ul>
+<li>¶1 从 GPU 的普及引出架构建模工具需求。</li>
+<li>¶2 说明解析模型更快、周期级模型更适合评估微架构变化。</li>
+</ul>
+</li>
+<li><strong>2.2 Trade-off between Accuracy and Simulation Speed</strong>：论证保留详细存储而简化核心的动机。<ul>
+<li>¶1 结合 SM 时间占比和内存准确性研究提出混合精度取舍。</li>
+</ul>
+</li>
+<li><strong>2.3 GPU Simulation Parallelization</strong>：解释已有 SM 并行为什么扩展有限。<ul>
+<li>¶1 用既有仿真慢速与 fork-join 加速数据说明并行需求。</li>
+<li>¶2 分析串行 memory/interconnect 与全局同步，并提出按通信依赖解耦的机会。</li>
+</ul>
+</li>
+<li><strong>3 LPGSim Toolchain</strong>：介绍 trace 到混合精度模拟器的端到端构成。</li>
+<li>¶1 用 Fig.1 说明 trace 转换压缩、不同部件精度及实现来源。</li>
+<li><strong>3.1 Core Pipeline Simplification</strong>：解释计算指令合并和访存依赖保留。<ul>
+<li>¶1 定义简化流水线中保留与删除的组件。</li>
+<li>¶2 说明只维护访存相关寄存器依赖的 tracker。</li>
+<li>¶3 定义转换后的 COMPUTE 与 DEP 指令。</li>
+<li>¶4 通过 Fig.2(a) 解释访存—访存依赖和计算合并。</li>
+<li>¶5 通过 Fig.2(b) 解释访存—计算依赖的 DEP 表示。</li>
+<li>¶6 逐类说明 COMPUTE、memory、DEP 的发射执行与写回路径。</li>
+</ul>
+</li>
+<li><strong>3.2 Detailed and Flexible Memory System Model</strong>：列出可配置的详细存储模型。<ul>
+<li>¶1 说明 L1 分 bank/sector、L2 hash/分区及 DRAM 时序配置。</li>
+</ul>
+</li>
+<li><strong>3.3 Tracer</strong>：说明 NVBit 采集及两级压缩。<ul>
+<li>¶1 将 SASS 插桩、trace 转换和地址/Zstandard 压缩串起。</li>
+</ul>
+</li>
+<li><strong>4 Simulator Parallelization</strong>：用 Algorithm 1 概览三个并行优化层次。</li>
+<li>¶1 提出局部时钟、NUMA 分组及同步放宽三种策略。</li>
+<li><strong>4.1 Local-Clock-Based Parallelization</strong>：用子系统与双缓冲消除串行路径和全局屏障。<ul>
+<li>¶1 定义三类子系统，并用 Fig.3(a) 的双缓冲隔离同周期通信。</li>
+<li>¶2 说明只检查依赖方 local clock，以及静态/动态任务的执行流程。</li>
+<li>¶3 用 Fig.3(b) 时间线解释全局屏障等待和串行互连等待的减少。</li>
+</ul>
+</li>
+<li><strong>4.2 Thread and Subsystem Grouping and Interconnect Parallelization</strong>：解决跨核和跨插槽通信热点。<ul>
+<li>¶1 分析集中互连通信和动态迁移带来的 coherence/NUMA 开销。</li>
+<li>¶2 说明同插槽分组、子互连与 CAS 队列，以及仲裁次序变化的精度代价。</li>
+</ul>
+</li>
+<li><strong>4.3 Synchronization Relaxation for Performance Improvement as a Trade-off of Accuracy</strong>：以可控同步偏差缓解周期成本方差。<ul>
+<li>¶1 用 Table 1 的周期方差引出 threshold 与 batch 两种优化。</li>
+</ul>
+</li>
+<li><strong>4.4 Implementation Details</strong>：交代任务绑定和 trace 读取选择。<ul>
+<li>¶1 说明优先静态分配、余数动态分配，以及不并行 trace 读取的理由。</li>
+</ul>
+</li>
+<li><strong>5 Experiment Setup</strong>：定义 workload、硬件、指标和各项基线。</li>
+<li>¶1 用 Table 2 区分五套 benchmark 的实验子集，并以 Table 3 展示压缩容量。</li>
+<li>¶2 列出软件版本、真实 GPU、Nsight 与双插槽主机设置。</li>
+<li>¶3 定义周期/存储指标、roofline 分类及准确性实验关闭同步放宽的条件。</li>
+<li>¶4 说明完整核心对照不可用，因此采用既有误差作参考并添加 No-track 消融。</li>
+<li>¶5 定义性能基线、加强后的 fork-join 和考虑 occupancy 的 AOSP 公式。</li>
+<li>¶6 解释 AOSP 的时间项并强调它仅是并行潜力启发式。</li>
+<li><strong>6 Evaluation</strong>：分别评估准确性和各级模拟速度。</li>
+<li><strong>6.1 Accuracy Validation</strong>：验证三架构误差并讨论简化核心的适用性。<ul>
+<li>¶1 用 Table 5 与 Fig.4 报告周期及存储指标误差、标准差和相关性。</li>
+<li>¶2 用 Fig.5 比较计算/存储受限组，并解释计算简化何时仍足够准确。</li>
+<li>¶3 检查五个 A100 tensor-core benchmark 的周期误差。</li>
+<li>¶4 用 Table 6 和 No-track 相关性验证访存依赖保留的作用。</li>
+</ul>
+</li>
+<li><strong>6.2 Performance Comparison against State-of-the-Art GPU Simulators</strong>：逐层揭示速度收益、扩展瓶颈和误差代价。<ul>
+<li>¶1 用 Fig.6–7 报告单线程 speedup，并区分模型简化与代码实现差异。</li>
+<li>¶2 用 Fig.8–9 说明 fork-join 的互连串行瓶颈。</li>
+<li>¶3 解释基础 local-clock 在双插槽上受跨线程通信影响而退化。</li>
+<li>¶4 用 Fig.10 验证分组及互连并行的收益与剩余限制。</li>
+<li>¶5 用 Fig.11 说明 threshold=256 的速度优势和大型套件收益。</li>
+<li>¶6 用 Fig.12 比较批量周期在单插槽与双插槽的相反效果。</li>
+<li>¶7 用 Fig.13(a) 分析大 threshold 下 kernel 起止错位和冗余尾部周期。</li>
+<li>¶8 用 Fig.13(b)(c) 解释 batch 对短 kernel 的误差放大及长 kernel 的适用性。</li>
+</ul>
+</li>
+<li><strong>7 Discussion</strong>：交代特殊指令、功耗及架构覆盖边界。</li>
+<li>¶1 说明 tensor core 统一处理、测试未出现 texture 指令及当前不支持 texture pipeline。</li>
+<li>¶2 说明核心功耗信息缺失，而详细存储计数可作为存储功耗扩展基础。</li>
+<li>¶3 说明仅支持 NVIDIA/SASS、不能保证所有 benchmark 高精度及 trace-driven 功能验证局限。</li>
+<li><strong>8 Related Work</strong>：把 LPGSim 放入模拟精度、并行化和解析建模三条脉络。</li>
+<li>¶1 回顾 GPU 模拟器演进、依赖精度取舍及各类架构扩展。</li>
+<li>¶2 指出现有 GPU 并行方法主要关注 SM，突出全组件并行的区别。</li>
+<li>¶3 介绍 interval、reuse-distance、kernel sampling 与 ML 模型，并说明其与周期级模拟的互补性。</li>
+<li><strong>9 Conclusion</strong>：回收两层贡献、精度速度结果与代码发布信息。</li>
+<li>¶1 汇总轻量核心和分层并行的取舍，并指向工具链公开 artifact。</li>
+<li><strong>Acknowledgments</strong>：披露资助、审稿帮助和生成式 AI 的语言润色用途。</li>
+<li>¶1 感谢相关贡献者并说明资助及语言编辑声明。</li>
+<li><strong>References</strong>：列出 [1]–[81] 的背景、方法、工具与架构资料。</li>
+<li>条目导航：模拟器/并行化重点见 [6][28][35][38][43][70]，trace 工具见 [71]，LPGSim artifact 见 [49]；参考文献条目不是论证自然段，不逐条复述。</li>
+</ul>
+<p>本文无独立附录；文首版权、作者联系方式、ACM 引用格式和文末收修录用日期属于出版元数据，未计入正文自然段。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
